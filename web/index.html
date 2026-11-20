@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="light dark">
+<title>模型行情</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <h1 id="title">榜单</h1>
+    <button id="srcBtn" class="src" aria-label="数据更新状态"><i class="dot"></i><span id="srcText">加载中</span></button>
+  </header>
+  <main id="page" tabindex="-1"></main>
+  <div id="cmpBar" hidden></div>
+  <nav id="tabs" aria-label="主导航">
+    <button data-tab="rank"><b>榜</b><span>榜单</span></button>
+    <button data-tab="price"><b>价</b><span>价格</span></button>
+    <button data-tab="value"><b>值</b><span>性价比</span></button>
+    <button data-tab="usage"><b>额</b><span>额度</span></button>
+    <button data-tab="more"><b>多</b><span>更多</span></button>
+  </nav>
+</div>
+<div id="sheetMask" hidden></div>
+<section id="sheet" hidden role="dialog" aria-modal="true"></section>
+<div id="toast" hidden></div>
+<script src="js/logos.js"></script>
+<script src="js/aa-parse.js"></script>
+<script src="js/norm.js"></script>
+<script src="js/core.js"></script>
+<script src="js/aa-api.js"></script>
+<script src="js/sources.js"></script>
+<script src="js/update.js"></script>
+<script src="js/usage.js"></script>
+<script src="js/extra.js"></script>
+<script src="js/views-more.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

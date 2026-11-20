@@ -1,0 +1,303 @@
+/* views-more.js — 额度页、更多页、版本更新卡片、AA 官方接口卡片、赞赏页。ES2019。 */
+(function (w) {
+  'use strict';
+  var C = w.Core, U = w.Usage, X = w.Extra, esc = C.esc;
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var dlState = null;
+
+  function sizeOf(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+  function fmtNum(v, d) { return v == null ? '—' : (+v).toFixed(d == null ? 1 : d); }
+
+  function winRow(label, wobj) {
+    if (!wobj || typeof wobj !== 'object' || !(wobj.cap > 0)) return '';
+    var pct = Math.min(100, Math.round(100 * wobj.used / wobj.cap)), left = 100 - pct;
+    var reset = wobj.resetAt ? (wobj.resetAt > 1e12 ? wobj.resetAt : wobj.resetAt * 1000) - Date.now() : 0;
+    var rs = reset > 0 ? ' · ' + (reset > 864e5 ? Math.floor(reset / 864e5) + ' 天后重置'
+      : reset > 36e5 ? Math.floor(reset / 36e5) + ' 小时后重置'
+      : Math.max(1, Math.round(reset / 6e4)) + ' 分钟后重置') : '';
+    return '<div class="kv"><span>' + label + '</span><span class="' + (left < 10 ? 'bad' : '') + '">剩余 ' + left + '%' + esc(rs) + '</span></div>';
+  }
+  function daysLeft(iso) {
+    var t = Date.parse(iso); if (isNaN(t)) return String(iso);
+    var d = Math.ceil((t - Date.now()) / 864e5);
+    return d > 0 ? '还剩 ' + d + ' 天' : '今天到期';
+  }
+
+  function feedRow(x) {
+    var t = x.k === 'aa-new' ? '榜单新增：' + x.title + (x.ii != null ? '（智能 ' + fmtNum(x.ii) + '）' : '')
+      : x.k === 'price-new' ? '新上架：' + x.title : '调价：' + x.title;
+    var s = x.k === 'price-change'
+      ? x.sub + ' · 输入 ' + C.money(x.i0) + ' → ' + C.money(x.i) + '，输出 ' + C.money(x.o0) + ' → ' + C.money(x.o)
+      : x.k === 'price-new' ? x.sub + ' · ' + C.money(x.i) + ' / ' + C.money(x.o) : x.sub;
+    return '<div class="row"><span class="fk k-' + esc(x.k) + '"></span><div class="mid"><div class="nm"><span class="nt">' + esc(t) + '</span></div><div class="sub">' + esc(s || '') + ' · ' + C.ago(x.t) + '</div></div></div>';
+  }
+
+  w.registerMoreViews = function (A) {
+    var page = A.page, toast = A.toast, openSheet = A.openSheet, closeSheet = A.closeSheet;
+    var confirmSheet = A.confirmSheet, render = A.render, go = A.go;
+
+    // ================= 额度 =================
+    function noUsageSheet(u) {
+      openSheet('<h2>' + esc(u.name) + '</h2><p class="mut">' + esc(u.why) + '</p>' +
+        '<div class="btns"><button class="btn main" id="go">打开控制台</button><button class="btn" id="cl">关闭</button></div>', function () {
+        $('#go').onclick = function () { w.Native.openUrl(u.link); };
+        $('#cl').onclick = closeSheet;
+      });
+    }
+
+    function customSheet() {
+      openSheet('<h2>添加其他平台</h2>' +
+        '<label class="fld"><span>类型</span><select id="ck"><option value="newapi">中转站（One API / New API 一类）</option><option value="json">自定义 JSON 接口</option></select></label>' +
+        '<label class="fld"><span>名称</span><input id="cn" placeholder="例如：我的中转站"></label>' +
+        '<label class="fld"><span>网址</span><input id="cu" placeholder="https://xxx.com"></label><div id="cx"></div>' +
+        '<div class="btns"><button class="btn main" id="cs">保存平台</button><button class="btn" id="cl">取消</button></div>', function () {
+        function sync() {
+          $('#cx').innerHTML = $('#ck').value === 'json'
+            ? '<label class="fld"><span>查询路径</span><input id="cp" placeholder="/v1/user/balance"></label>' +
+              '<label class="fld"><span>剩余额度路径</span><input id="cr" placeholder="data.balance"></label>' +
+              '<label class="fld"><span>已用路径（可选）</span><input id="cd" placeholder="data.used"></label>' +
+              '<label class="fld"><span>总额路径（可选）</span><input id="cm" placeholder="data.total"></label>' : '';
+        }
+        $('#ck').onchange = sync; sync(); $('#cl').onclick = closeSheet;
+        $('#cs').onclick = function () {
+          try {
+            var p = U.fromForm({
+              kind: $('#ck').value, name: $('#cn').value.trim(), baseUrl: $('#cu').value,
+              path: $('#cp') && $('#cp').value, remainingPath: $('#cr') && $('#cr').value,
+              usedPath: $('#cd') && $('#cd').value, limitPath: $('#cm') && $('#cm').value
+            });
+            U.custom.push(p); U.saveCustom(); closeSheet(); toast('已添加，现在可以填密钥了'); addKeySheet();
+          } catch (e) { toast(e.message); }
+        };
+      });
+    }
+
+    function addKeySheet() {
+      var opts = U.all().map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>'; }).join('');
+      openSheet('<h2>添加密钥</h2>' +
+        '<label class="fld"><span>平台</span><select id="kp">' + opts + '<option value="__new">＋ 添加其他平台…</option></select></label>' +
+        '<div id="kb"></div>' +
+        '<label class="fld"><span>密钥</span><input id="kk" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-..."></label>' +
+        '<label class="fld"><span>备注（可选）</span><input id="kl" placeholder="我的主账号"></label>' +
+        '<p class="mut" id="kn" style="font-size:12px;margin:0 0 4px"></p>' +
+        '<div class="btns"><button class="btn main" id="ks">保存并查询</button><button class="btn" id="cl">取消</button></div>', function () {
+        function sync() {
+          var v = $('#kp').value; if (v === '__new') { closeSheet(); customSheet(); return; }
+          var p = U.get(v); $('#kn').textContent = p.note || '';
+          $('#kb').innerHTML = '<label class="fld"><span>网址</span><input id="ku" value="' + esc(p.baseUrl || '') + '" placeholder="https://你的平台网址"></label>';
+        }
+        $('#kp').onchange = sync; sync(); $('#cl').onclick = closeSheet;
+        $('#ks').onclick = function () {
+          try {
+            var p = U.get($('#kp').value);
+            var a = U.addAccount({ providerId: p.id, label: $('#kl').value.trim(), baseUrl: $('#ku').value.trim() }, $('#kk').value);
+            closeSheet(); toast('已保存，正在查询…');
+            U.refreshAccount(a.id).then(function (r) { render(); toast(r.ok ? '查询成功' : '查询失败：' + r.error); });
+            render();
+          } catch (e) { toast(e.message); }
+        };
+      });
+    }
+
+    function viewUsage() {
+      var info = U.accounts, html = '';
+      if (!info.length) {
+        html += '<div class="card"><div class="empty" style="padding:26px 12px 18px">' +
+          '<b>还没有添加密钥</b>' +
+          '<p>密钥仅存在本机硬件加密存储中，不上传、不备份。支持 OpenRouter、DeepSeek、硅基流动、Kimi、Command Code 及中转站。</p>' +
+          '<div class="btns"><button class="btn main" id="add">添加密钥</button></div></div></div>';
+      } else {
+        info.forEach(function (a) {
+          var p = U.get(a.providerId), r = U.results[a.id], f = r && r.ok ? r.fields : null;
+          var unit = (r && r.unit) || (p && p.unit) || 'USD', sym = unit === 'CNY' ? '¥' : '$';
+          function m(v) { return v == null ? '—' : sym + (+v).toFixed(v >= 100 ? 0 : 2); }
+          html += '<div class="card"><div class="acct-hd"><div><h3>' + esc(a.label || (p ? p.name : '未知')) + '</h3><p>' + esc(p ? p.name : a.providerId) + '</p></div>' +
+            '<span class="tag">' + esc(unit) + '</span></div>';
+          if (f) {
+            html += (f.remaining != null ? '<div class="big ' + (f.limit && f.remaining / f.limit < 0.1 ? 'bad' : 'good') + '">' + m(f.remaining) + '<small class="mut" style="font:400 12px var(--sans)"> 剩余</small></div>' : '') +
+              (f.limit != null ? '<div class="kv"><span>总额度</span><span>' + m(f.limit) + '</span></div>' : '') +
+              (f.used != null ? '<div class="kv"><span>已使用</span><span>' + m(f.used) + '</span></div>' : '') +
+              (f.granted != null ? '<div class="kv"><span>赠送余额</span><span>' + m(f.granted) + '</span></div>' : '') +
+              (f.topped != null ? '<div class="kv"><span>充值余额</span><span>' + m(f.topped) + '</span></div>' : '') +
+              (f.free != null ? '<div class="kv"><span>免费额度</span><span>' + m(f.free) + '</span></div>' : '') +
+              winRow('5 小时窗口', f.w5) + winRow('每周窗口', f.w7) +
+              (f.periodEnd ? '<div class="kv"><span>本期结束</span><span>' + esc(daysLeft(f.periodEnd)) + '</span></div>' : '') +
+              (f.plan != null ? '<div class="kv"><span>套餐</span><span>' + esc(f.plan) + (f.status ? '（' + esc(f.status) + '）' : '') + '</span></div>' : '') +
+              '<div class="acct-meta">' + C.ago(r.at) + '查询' + (f.limit != null && f.limit > 1e6 ? ' · 额度极大，通常为不限额' : '') + '</div>';
+          } else if (r) {
+            html += '<p class="bad" style="margin-top:8px">' + esc(r.error) + '</p>';
+          } else {
+            html += '<p class="mut" style="margin-top:6px">尚未查询</p>';
+          }
+          html += '<div class="btns"><button class="btn sm main" data-q="' + a.id + '">查询额度</button><button class="btn sm" data-d="' + a.id + '">删除</button></div></div>';
+        });
+        html += '<div class="pad"><div class="btns" style="margin-top:2px"><button class="btn main" id="add">添加密钥</button>' +
+          (info.length > 1 ? '<button class="btn" id="all">全部查询</button>' : '') + '</div></div>';
+      }
+      html += '<div class="sec">以下平台需在官网控制台查看</div><div class="list boxed">' +
+        U.unsupported.map(function (u) {
+          return '<button class="un-row" data-u="' + esc(u.id) + '"><span>' + esc(u.name) + '</span><span class="ar">控制台 ›</span></button>';
+        }).join('') + '</div>';
+      page.innerHTML = html;
+      page.onclick = function (e) {
+        var q = e.target.getAttribute('data-q'), d = e.target.getAttribute('data-d'), un = e.target.closest('[data-u]');
+        if (q) { e.target.textContent = '查询中…'; U.refreshAccount(q).then(function (r) { render(); toast(r.ok ? '已查询' : '查询失败'); }); }
+        if (d) confirmSheet('删除这个密钥？', '删除', function () { U.removeAccount(d); render(); toast('已删除'); });
+        if (e.target.id === 'add') addKeySheet();
+        if (e.target.id === 'all') {
+          U.accounts.reduce(function (p, a) { return p.then(function () { return U.refreshAccount(a.id); }); }, Promise.resolve())
+            .then(function () { render(); toast('已全部查询'); });
+        }
+        if (un) { var u = U.unsupported.filter(function (x) { return x.id === un.getAttribute('data-u'); })[0]; if (u) noUsageSheet(u); }
+      };
+    }
+
+    // ================= 更多 =================
+    function doDownload(asset) {
+      var last = 0;
+      w.Update.download(asset, function (p) {
+        if (dlState && p.step > 1) { dlState.pct = 0; dlState.try = p.step; upCard(); }
+      }, function (got, total) {
+        var now = Date.now();
+        if (now - last < 250 && got < total) return;
+        last = now;
+        if (!dlState) dlState = {};
+        dlState.total = total || (asset && asset.size) || 0;
+        dlState.pct = dlState.total ? Math.min(100, Math.round(got / dlState.total * 100)) : 0;
+        upCard();
+      }).then(function (r) {
+        if (!r.ok) { dlState = null; toast(r.error); upCard(); return; }
+        if (dlState) { dlState.pct = 100; upCard(); }
+        var res; try { res = JSON.parse(w.Native.installApk()); } catch (e) { res = { ok: false, error: String(e && e.message || e) }; }
+        if (res.ok) toast('按提示完成安装');
+        else if (res.need === 'permission') toast('允许安装后返回再点一次下载');
+        else toast(res.error || '未能拉起安装界面');
+        setTimeout(function () { dlState = null; upCard(); }, 600);
+      });
+    }
+
+    function upCard() {
+      var el = $('#upcard'); if (!el) return;
+      var Up = w.Update, v = Up.current(), l = Up.latest, d = dlState;
+      var statusTag = Up.checking ? '<span class="tag">检查中…</span>'
+        : l && l.newer ? '<span class="tag zhu">有新版 ' + esc(l.tag) + '</span>'
+        : l ? '<span class="tag good">已是最新</span>' : '';
+      var h = '<div class="kv"><span>当前版本</span><span>' + esc(v) + (statusTag ? ' ' + statusTag : '') + '</span></div>';
+      if (!Up.checking && !l && Up.error) h += '<p class="mut" style="margin-top:6px">' + esc(Up.error.message) + '</p>';
+      if (d) {
+        var pct = Math.max(0, Math.min(100, d.pct || 0));
+        h += '<div class="ptrack"><i class="pfill" style="width:' + pct + '%"></i></div>' +
+          '<p class="dlmsg">' + (pct >= 100 ? '下载完成，正在打开安装' : pct + '%' + (d.total ? ' · ' + sizeOf(d.total) : '') + (d.try > 1 ? ' · 线路 ' + d.try : '')) + '</p>';
+      }
+      h += '<div class="btns">' +
+        (l && l.newer
+          ? '<button class="btn sm main" id="dl"' + (d ? ' disabled' : '') + '>' + (d ? '下载中…' : '下载新版' + (l.apk ? '（' + sizeOf(l.apk.size) + '）' : '')) + '</button>'
+          : '<button class="btn sm" id="ck">检查更新</button>') +
+        (l && l.newer && !l.apk ? '<button class="btn sm" id="pg">打开下载页</button>' : '') +
+        (l && l.newer && l.notes ? '<button class="btn sm" id="rn">更新说明</button>' : '') +
+        '</div>';
+      el.innerHTML = h;
+      if ($('#ck')) $('#ck').onclick = function () { toast('正在检查…'); Up.check().then(function (r) { upCard(); toast(r ? (r.newer ? '发现新版本 ' + r.tag : '已是最新') : '检查失败'); }); };
+      if ($('#pg')) $('#pg').onclick = function () { w.Native.openUrl(l.page); };
+      if ($('#rn')) $('#rn').onclick = function () {
+        openSheet('<h2>更新说明 ' + esc(l.tag) + '</h2>' + X.notesHtml(l.notes) +
+          '<div class="btns"><button class="btn" id="pg2">在浏览器打开</button><button class="btn" id="cl">关闭</button></div>', function () {
+          $('#pg2').onclick = function () { w.Native.openUrl(l.page); };
+          $('#cl').onclick = closeSheet;
+        });
+      };
+      if ($('#dl')) $('#dl').onclick = function () { dlState = { pct: 0 }; upCard(); doDownload(l.apk); };
+    }
+
+    function aaCard() {
+      var el = $('#aacard'); if (!el) return;
+      var api = C.settings.aaMode === 'api', has = w.Native.hasSecret(w.AaApi.SECRET), s = C.sources.aa, rate = s.meta && s.meta.rate;
+      var h = '<div class="kv"><span>AA 数据源</span><span>' + (api ? '官方接口' : '公开页面') + '</span></div>';
+      if (api && rate && rate.remaining != null) h += '<div class="kv"><span>今日剩余请求</span><span>' + rate.remaining + ' / ' + (rate.limit || 100) + '</span></div>';
+      if (api && s.error) h += '<p class="bad" style="margin-top:6px">' + esc(s.error.message) + '</p>';
+      h += '<div class="btns"><button class="btn sm main" id="aak">' + (has ? '更换密钥' : '填官方密钥') + '</button>' +
+        (has ? '<button class="btn sm" id="aam">' + (api ? '改用公开页面' : '改用官方接口') + '</button>' : '') + '</div>';
+      el.innerHTML = h;
+      $('#aak').onclick = function () {
+        openSheet('<h2>AA 官方密钥</h2><label class="fld"><span>密钥</span><input id="aav" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="免费，每天 100 次请求"></label>' +
+          '<div class="btns"><button class="btn main" id="aas">保存并使用</button><button class="btn" id="aag">去获取密钥</button><button class="btn" id="cl">取消</button></div>', function () {
+          $('#aag').onclick = function () { w.Native.openUrl(w.AaApi.KEY_PAGE); };
+          $('#cl').onclick = closeSheet;
+          $('#aas').onclick = function () {
+            var v = $('#aav').value.trim(); if (!v) { toast('请粘贴密钥'); return; }
+            if (!w.Native.setSecret(w.AaApi.SECRET, v)) { toast('密钥未能保存到安全存储'); return; }
+            var prev = C.settings.aaMode; C.settings.aaMode = 'api'; C.saveSettings(); closeSheet(); toast('正在验证…');
+            C.refresh('aa', true).then(function (ok) {
+              if (ok) toast('已切换到官方接口');
+              else { C.settings.aaMode = prev; C.saveSettings(); toast(s.error ? s.error.message : '验证失败'); w.Native.deleteSecret(w.AaApi.SECRET); }
+              render();
+            });
+          };
+        });
+      };
+      if ($('#aam')) $('#aam').onclick = function () {
+        C.settings.aaMode = api ? 'scrape' : 'api'; C.saveSettings(); toast('正在刷新…');
+        C.refresh('aa', true).then(function (ok) {
+          if (!ok) { C.settings.aaMode = api ? 'api' : 'scrape'; C.saveSettings(); toast(s.error ? s.error.message : '刷新失败'); }
+          else toast('已切换');
+          render();
+        });
+      };
+    }
+
+    function openFeedSheet(feed) {
+      openSheet('<h2>全部变动（' + feed.length + '）</h2><div class="list" style="margin:0 -16px">' +
+        feed.map(feedRow).join('') + '</div><div class="btns"><button class="btn" id="cl">关闭</button></div>', function () {
+        $('#cl').onclick = closeSheet;
+      });
+    }
+
+    function viewMore() {
+      var feed = C.feed || [];
+      var html = '<div class="sec" style="padding-top:6px">偏好设置</div><div class="card">' +
+        '<div class="kv"><span>显示币种</span><select class="inline" id="cur"><option value="USD">美元 $</option><option value="CNY">人民币 ¥</option></select></div>' +
+        '<div class="kv"><span>外观主题</span><select class="inline" id="th"><option value="auto">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>' +
+        '<div class="kv"><span>混合价比例</span><select class="inline" id="bl"><option value="1">1 : 1</option><option value="3">3 : 1</option><option value="5">5 : 1</option><option value="10">10 : 1</option></select></div>' +
+        '<div class="kv"><span>榜单档位</span><select class="inline" id="dd"><option value="1">只留最高档</option><option value="0">全部档位</option></select></div></div>' +
+        '<div class="sec">版本与数据源</div><div class="card" id="upcard"></div><div class="card" id="aacard"></div>';
+
+      // 变动记录默认只放 3 条紧凑预览，点「全部」进弹层看，不把设置页挤满
+      html += '<div class="fhead"><span>最近变动</span>' +
+        (feed.length ? '<button class="fmore" id="fmore">全部 ' + feed.length + ' ›</button>' : '') + '</div>';
+      html += feed.length
+        ? '<div class="list boxed">' + feed.slice(0, 3).map(feedRow).join('') + '</div>'
+        : '<div class="card"><p class="mut" style="margin:0">暂无变动。后续刷新若发现新模型或调价，会自动记在这里。</p></div>';
+
+      html += '<div class="sec">存储与数据</div><div class="card">' +
+        '<div class="kv"><span>本地缓存占用</span><span>' + (w.Native.dataSize() / 1048576).toFixed(1) + ' MB</span></div>' +
+        '<div class="btns"><button class="btn sm" id="rf">刷新全部数据</button><button class="btn sm" id="cc">清空缓存和密钥</button></div></div>' +
+        '<div class="thankswrap"><button id="thx" class="btn sm ghost">觉得好用？请作者喝杯茶</button></div>';
+
+      page.innerHTML = html;
+      $('#cur').value = C.settings.currency; $('#th').value = C.settings.theme;
+      $('#bl').value = String(C.settings.blend); $('#dd').value = C.settings.aaDedupe ? '1' : '0';
+      upCard(); aaCard();
+      if ($('#fmore')) $('#fmore').onclick = function () { openFeedSheet(feed); };
+      $('#cur').onchange = function (e) { C.saveSettings({ currency: e.target.value }); render(); };
+      $('#th').onchange = function (e) { C.saveSettings({ theme: e.target.value }); };
+      $('#bl').onchange = function (e) { C.saveSettings({ blend: +e.target.value }); toast('已更新混合价比例'); };
+      $('#dd').onchange = function (e) { C.saveSettings({ aaDedupe: e.target.value === '1' }); toast('已更新'); };
+      $('#rf').onclick = function () { toast('正在刷新…'); C.refreshAll(true).then(function (r) { toast(r.every(Boolean) ? '已刷新' : '部分数据未刷新成功'); render(); }); };
+      $('#cc').onclick = function () { confirmSheet('清空所有缓存和密钥？', '清空', function () { w.Native.clearData(); toast('已清空，请重新打开应用'); }); };
+      $('#thx').onclick = function () { go('thanks'); };
+    }
+
+    function viewThanks() {
+      page.innerHTML = '<div class="thanks-page">' +
+        '<h2>谢谢你用这个小工具</h2>' +
+        '<p>个人做的公益小工具，没有广告，不收费，也不会收集你的任何数据。如果帮到了你，欢迎随意赞赏，完全自愿。</p>' +
+        '<img class="thanks-qr" src="assets/donate.png" alt="赞赏码">' +
+        '<p class="thanks-tip">保存后在微信「扫一扫」点右上角相册图标选择即可</p>' +
+        '<div class="btns" style="justify-content:center"><button class="btn main" id="sv">保存到相册</button><button class="btn" id="bk">返回</button></div></div>';
+      $('#sv').onclick = function () { toast(w.Native.saveImage('web/assets/donate.png', '赞赏码.png') ? '已保存到相册（Pictures/模型行情）' : '保存失败，可以直接截屏'); };
+      $('#bk').onclick = function () { go('more'); };
+    }
+
+    return { usage: viewUsage, more: viewMore, thanks: viewThanks, upCard: upCard };
+  };
+})(window);

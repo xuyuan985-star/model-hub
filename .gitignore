@@ -1,0 +1,19 @@
+# 构建产物
+build/
+dist/
+*.apk
+
+# 签名密钥（不要上传；本地保留，换掉会导致已装版本无法覆盖升级）
+tools/debug.keystore
+
+# 研究用的大文件与临时下载
+research/
+toolchain/
+
+# 系统
+.DS_Store
+Thumbs.db
+tools/_*
+
+# 本地测试截图（不入库）
+docs/shots/
