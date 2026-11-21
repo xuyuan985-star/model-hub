@@ -345,6 +345,30 @@ public class MainActivity extends Activity {
             }
         }
 
+        /** 把网页 Canvas 生成的 PNG (base64) 保存到相册 Pictures/模型行情。 */
+        @JavascriptInterface
+        public boolean saveBase64Image(String base64, String displayName) {
+            if (base64 == null || base64.isEmpty() || Build.VERSION.SDK_INT < 29) return false;
+            try {
+                int comma = base64.indexOf(',');
+                String raw = comma >= 0 ? base64.substring(comma + 1) : base64;
+                byte[] bytes = android.util.Base64.decode(raw, android.util.Base64.DEFAULT);
+                if (bytes.length < 64 || bytes.length > 16 * 1024 * 1024) return false;
+                android.content.ContentValues v = new android.content.ContentValues();
+                v.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, displayName == null || displayName.isEmpty() ? "模型对比.png" : displayName);
+                v.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png");
+                v.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/模型行情");
+                Uri uri = getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+                if (uri == null) return false;
+                java.io.OutputStream out = getContentResolver().openOutputStream(uri);
+                out.write(bytes);
+                out.close();
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
         /** 后台下载新版本安装包到应用缓存。完成后回调 window.__apkDone(id, json)。 */
         @JavascriptInterface
         public void downloadApk(final String id, final String url) {

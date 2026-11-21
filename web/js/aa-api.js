@@ -9,15 +9,26 @@
   function n(v) { return typeof v === 'number' && isFinite(v) ? v : null; }
   function first(a, b) { return a != null ? a : b; }
 
+  /** 从 API 的模型名（如 "GLM-5.3 (Max)"）拆出基础名与档位，跳过 (Vision)/(32B)/(June 2026) 等非档位括号。 */
+  var VARIANT_RE = /\b(non-reasoning|reasoning|xhigh|max|high|medium|low|minimal|adaptive)\b/i;
+  function splitName(name) {
+    var m = name.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+    if (m && VARIANT_RE.test(m[2])) {
+      return { base: m[1].trim() || name, variant: m[2].trim() };
+    }
+    return { base: name, variant: null };
+  }
+
   /** 官方一条记录 -> 和网页抓取版相同的模型结构（官方免费档没有的字段为 null）。 */
   API.mapItem = function (d) {
     var ev = d.evaluations || {}, pr = d.pricing || {}, pf = d.performance || {}, p3 = d.performance_v3 || {};
     var cr = d.model_creator || {}, ic = d.artificial_analysis_intelligence_index_cost || {};
     var name = String(d.name || d.slug || '');
+    var sp = splitName(name);
     var i = n(pr.price_1m_input_tokens), o = n(pr.price_1m_output_tokens);
     return {
-      id: d.id, name: name, shortName: null, variant: null, slug: d.slug,
-      releaseName: name.replace(/\s*\([^)]*\)\s*$/, '').trim() || name,
+      id: d.id, name: name, shortName: null, variant: sp.variant, slug: d.slug,
+      releaseName: sp.base,
       url: 'https://artificialanalysis.ai/models/' + d.slug,
       creatorName: cr.name || null, creatorSlug: null, creatorCountry: null, creatorLogoUrl: null, creatorColor: null,
       releaseDate: d.release_date || null, isReasoning: null, isOpenWeights: null, deprecated: false, contextWindowTokens: null,
@@ -61,7 +72,7 @@
         var h = r.headers || {};
         rate = { limit: +h['x-ratelimit-limit'] || null, remaining: h['x-ratelimit-remaining'] != null ? +h['x-ratelimit-remaining'] : null, reset: h['x-ratelimit-reset'] || null };
         version = j.intelligence_index_version; tier = j.tier || h['x-aa-tier'] || null;
-        if (j.pagination && j.pagination.has_more && page < 6) { page++; return step(); }
+        if (j.pagination && j.pagination.has_more && page < 15) { page++; return step(); }
       });
     }
     return step().then(function () {

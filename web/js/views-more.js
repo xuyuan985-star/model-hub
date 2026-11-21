@@ -99,8 +99,14 @@
       });
     }
 
+    var pingState = {}; // acctId -> {ok, ms, grade, error}
+
     function viewUsage() {
       var info = U.accounts, html = '';
+      var alerts = w.Tools ? w.Tools.alerts() : [];
+      if (alerts.length) {
+        html += '<div class="alert-bar"><b>额度提醒：</b>' + alerts.map(function (x) { return esc(x.name) + ' ' + esc(x.msg); }).join('；') + '</div>';
+      }
       if (!info.length) {
         html += '<div class="card"><div class="empty" style="padding:26px 12px 18px">' +
           '<b>还没有添加密钥</b>' +
@@ -110,6 +116,7 @@
         info.forEach(function (a) {
           var p = U.get(a.providerId), r = U.results[a.id], f = r && r.ok ? r.fields : null;
           var unit = (r && r.unit) || (p && p.unit) || 'USD', sym = unit === 'CNY' ? '¥' : '$';
+          var pg = pingState[a.id];
           function m(v) { return v == null ? '—' : sym + (+v).toFixed(v >= 100 ? 0 : 2); }
           html += '<div class="card"><div class="acct-hd"><div><h3>' + esc(a.label || (p ? p.name : '未知')) + '</h3><p>' + esc(p ? p.name : a.providerId) + '</p></div>' +
             '<span class="tag">' + esc(unit) + '</span></div>';
@@ -129,7 +136,14 @@
           } else {
             html += '<p class="mut" style="margin-top:6px">尚未查询</p>';
           }
-          html += '<div class="btns"><button class="btn sm main" data-q="' + a.id + '">查询额度</button><button class="btn sm" data-d="' + a.id + '">删除</button></div></div>';
+          if (pg) {
+            html += '<div class="ping-tag">' + (pg.ok
+              ? '<span class="tag good">延迟 ' + pg.ms + 'ms · ' + esc(pg.grade) + '</span>'
+              : '<span class="tag zhu">' + esc(pg.error || '测速失败') + (pg.ms ? ' (' + pg.ms + 'ms)' : '') + '</span>') + '</div>';
+          }
+          html += '<div class="btns"><button class="btn sm main" data-q="' + a.id + '">查询额度</button>' +
+            '<button class="btn sm" data-p="' + a.id + '">测速</button>' +
+            '<button class="btn sm" data-d="' + a.id + '">删除</button></div></div>';
         });
         html += '<div class="pad"><div class="btns" style="margin-top:2px"><button class="btn main" id="add">添加密钥</button>' +
           (info.length > 1 ? '<button class="btn" id="all">全部查询</button>' : '') + '</div></div>';
@@ -140,9 +154,16 @@
         }).join('') + '</div>';
       page.innerHTML = html;
       page.onclick = function (e) {
-        var q = e.target.getAttribute('data-q'), d = e.target.getAttribute('data-d'), un = e.target.closest('[data-u]');
+        var q = e.target.getAttribute('data-q'), pBtn = e.target.getAttribute('data-p'), d = e.target.getAttribute('data-d'), un = e.target.closest('[data-u]');
         if (q) { e.target.textContent = '查询中…'; U.refreshAccount(q).then(function (r) { render(); toast(r.ok ? '已查询' : '查询失败'); }); }
-        if (d) confirmSheet('删除这个密钥？', '删除', function () { U.removeAccount(d); render(); toast('已删除'); });
+        if (pBtn && w.Tools) {
+          var acct = U.accounts.filter(function (x) { return x.id === pBtn; })[0];
+          if (acct) {
+            e.target.textContent = '测速中…';
+            w.Tools.testLatency(acct).then(function (res) { pingState[pBtn] = res; render(); toast(res.ok ? '延迟 ' + res.ms + 'ms' : (res.error || '测速失败')); });
+          }
+        }
+        if (d) confirmSheet('删除这个密钥？', '删除', function () { U.removeAccount(d); delete pingState[d]; render(); toast('已删除'); });
         if (e.target.id === 'add') addKeySheet();
         if (e.target.id === 'all') {
           U.accounts.reduce(function (p, a) { return p.then(function () { return U.refreshAccount(a.id); }); }, Promise.resolve())
@@ -268,9 +289,10 @@
         ? '<div class="list boxed">' + feed.slice(0, 3).map(feedRow).join('') + '</div>'
         : '<div class="card"><p class="mut" style="margin:0">暂无变动。后续刷新若发现新模型或调价，会自动记在这里。</p></div>';
 
-      html += '<div class="sec">存储与数据</div><div class="card">' +
+      html += '<div class="sec">存储与备份</div><div class="card">' +
+        '<div class="kv"><span>低余额提醒阈值（美元 / 人民币）</span><span><input id="au" type="number" class="inline-num sm" value="' + (C.settings.alertUsd != null ? C.settings.alertUsd : 2) + '"> / <input id="ac" type="number" class="inline-num sm" value="' + (C.settings.alertCny != null ? C.settings.alertCny : 10) + '"></span></div>' +
         '<div class="kv"><span>本地缓存占用</span><span>' + (w.Native.dataSize() / 1048576).toFixed(1) + ' MB</span></div>' +
-        '<div class="btns"><button class="btn sm" id="rf">刷新全部数据</button><button class="btn sm" id="cc">清空缓存和密钥</button></div></div>' +
+        '<div class="btns"><button class="btn sm" id="rf">刷新全部数据</button><button class="btn sm" id="cfg">导出 / 导入配置</button><button class="btn sm" id="cc">清空缓存和密钥</button></div></div>' +
         '<div class="thankswrap"><button id="thx" class="btn sm ghost">觉得好用？请作者喝杯茶</button></div>';
 
       page.innerHTML = html;
@@ -282,7 +304,23 @@
       $('#th').onchange = function (e) { C.saveSettings({ theme: e.target.value }); };
       $('#bl').onchange = function (e) { C.saveSettings({ blend: +e.target.value }); toast('已更新混合价比例'); };
       $('#dd').onchange = function (e) { C.saveSettings({ aaDedupe: e.target.value === '1' }); toast('已更新'); };
+      $('#au').onchange = function (e) { C.saveSettings({ alertUsd: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
+      $('#ac').onchange = function (e) { C.saveSettings({ alertCny: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
       $('#rf').onclick = function () { toast('正在刷新…'); C.refreshAll(true).then(function (r) { toast(r.every(Boolean) ? '已刷新' : '部分数据未刷新成功'); render(); }); };
+      $('#cfg').onclick = function () {
+        if (!w.Tools) return;
+        var exported = w.Tools.exportConfig();
+        openSheet('<h2>配置导出 / 导入</h2><p class="mut" style="margin:-4px 0 8px">包含自选模型、置顶平台、自定义额度接口与自定义套餐；不含任何 API 密钥。</p>' +
+          '<textarea class="cfg-box" id="cfgTxt">' + esc(exported) + '</textarea>' +
+          '<div class="btns"><button class="btn main" id="cfgCp">复制配置</button><button class="btn" id="cfgIm">按文本框内容导入</button><button class="btn" id="cl">关闭</button></div>', function () {
+          $('#cfgCp').onclick = function () { w.Native.copy($('#cfgTxt').value); toast('已复制到剪贴板'); };
+          $('#cfgIm').onclick = function () {
+            try { w.Tools.importConfig($('#cfgTxt').value); closeSheet(); render(); toast('配置已导入'); }
+            catch (e) { toast(e.message); }
+          };
+          $('#cl').onclick = closeSheet;
+        });
+      };
       $('#cc').onclick = function () { confirmSheet('清空所有缓存和密钥？', '清空', function () { w.Native.clearData(); toast('已清空，请重新打开应用'); }); };
       $('#thx').onclick = function () { go('thanks'); };
     }

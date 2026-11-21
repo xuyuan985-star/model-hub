@@ -33,5 +33,17 @@ fs.writeFileSync(path.join(seedDir, 'prices.json'), JSON.stringify({ fetchedAt: 
 const fx = await (await get('https://open.er-api.com/v6/latest/USD')).json();
 fs.writeFileSync(path.join(seedDir, 'fx.json'), JSON.stringify({ fetchedAt: Date.now(), data: { CNY: fx.rates.CNY, date: fx.time_last_update_utc } }));
 
-for (const f of ['aa', 'prices', 'fx']) console.log(f, (fs.statSync(path.join(seedDir, f + '.json')).size / 1024).toFixed(0) + ' KB');
+globalThis.window = globalThis;
+globalThis.Core = { settings: { aaMode: 'scrape' }, defSource() {} };
+require(path.join(root, 'web', 'js', 'aa-extra.js'));
+for (const [id, url, fn] of [
+  ['aa_providers', 'https://artificialanalysis.ai/leaderboards/providers', t => globalThis.AaExtra.parseProviders(t)],
+  ['aa_t2i', 'https://artificialanalysis.ai/image/leaderboard/text-to-image', t => globalThis.AaExtra.parseMediaRsc(t, 't2i')],
+  ['aa_t2v', 'https://artificialanalysis.ai/video/leaderboard/text-to-video', t => globalThis.AaExtra.parseMediaRsc(t, 't2v')]
+]) {
+  const txt = await (await get(url, { RSC: '1' })).text();
+  fs.writeFileSync(path.join(seedDir, id + '.json'), JSON.stringify({ fetchedAt: Date.now(), data: fn(txt) }));
+}
+
+for (const f of ['aa', 'prices', 'fx', 'aa_providers', 'aa_t2i', 'aa_t2v']) console.log(f, (fs.statSync(path.join(seedDir, f + '.json')).size / 1024).toFixed(0) + ' KB');
 console.log('models', aa.models.length, 'providers', Object.keys(prices.providers).length, 'price models', Object.values(prices.providers).reduce((a, p) => a + p.models.length, 0), 'ms', Date.now() - t0);

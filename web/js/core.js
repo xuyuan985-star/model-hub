@@ -114,7 +114,11 @@
     return s.promise;
   };
   core.refreshAll = function (force) {
-    return Promise.all(Object.keys(sources).map(function (id) { return (force || stale(sources[id])) ? core.refresh(id, force) : true; }));
+    return Promise.all(Object.keys(sources).map(function (id) {
+      var s = sources[id];
+      if (s.def.lazy && !force && !s.data) return true;
+      return (force || stale(s)) ? core.refresh(id, force) : true;
+    }));
   };
   core.sourceLabel = function (s) {
     if (s.refreshing) return '更新中…';

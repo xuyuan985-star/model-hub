@@ -4,7 +4,7 @@
   var C = w.Core, N = w.Norm, X = w.Extra, esc = C.esc;
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var page = $('#page'), TABS = { rank: '榜单', price: '价格', value: '性价比', usage: '额度', more: '更多', thanks: '赞赏' };
-  var st = { tab: 'rank', metric: 'ii', q: '', favOnly: false, creator: '', provider: null, sort: 'in', pq: '', vq: '', showFree: false, rankLimit: 60 };
+  var st = { tab: 'rank', rankMode: 'llm', priceMode: 'prov', valMode: 'chart', metric: 'ii', q: '', favOnly: false, creator: '', provider: null, sort: 'in', pq: '', vq: '', showFree: false, rankLimit: 60 };
   var sheetOpen = false;
 
   // ---------- 主题 ----------
@@ -79,7 +79,11 @@
   function cmpSheet() {
     var ms = cmpModels(); if (!ms.length) { toast('长按榜单或性价比里的模型即可加入对比'); return; }
     openSheet('<h2>模型对比</h2>' + X.cmpTableHtml(ms) +
-      '<div class="btns"><button class="btn" id="cl">关闭</button><button class="btn" id="clr">清空重选</button></div>', function () {
+      '<div class="btns"><button class="btn main" id="cImg">存为分享图</button><button class="btn" id="clr">清空重选</button><button class="btn" id="cl">关闭</button></div>', function () {
+      $('#cImg').onclick = function () {
+        var ok = w.Share && w.Share.saveCmpCard(ms);
+        toast(ok ? '已存到相册（Pictures/模型行情）' : '生成失败，可直接截屏');
+      };
       $('#cl').onclick = closeSheet;
       $('#clr').onclick = function () { cmpClear(); closeSheet(); toast('已清空'); };
       [].forEach.call($('#sheet').querySelectorAll('[data-rm]'), function (b) {
@@ -123,7 +127,11 @@
   }
 
   // ---------- 导航与状态条 ----------
-  var VIEWS = {}, moreMod = null;
+  var VIEWS = {}, moreMod = null, subMod = null;
+  function updateUsageBadge() {
+    var b = document.querySelector('#tabs button[data-tab=usage]');
+    if (b && w.Tools) b.classList.toggle('hasupd', w.Tools.alerts().length > 0);
+  }
   function go(tab) {
     if (st.tab !== tab) st.rankLimit = 60;
     st.tab = tab; $('#title').textContent = TABS[tab];
@@ -134,14 +142,15 @@
   function render() {
     page.onclick = null;
     try { VIEWS[st.tab](); } catch (e) { console.error(e); page.innerHTML = empty('这个页面出错了', String(e && e.message || e)); }
-    updateSrc(); renderCmpBar();
+    updateSrc(); renderCmpBar(); updateUsageBadge();
   }
   $('#tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) go(b.getAttribute('data-tab')); });
 
   function updateSrc() {
-    var ids = { rank: ['aa'], price: ['prices', 'fx'], value: ['aa', 'prices'], usage: [], more: ['aa', 'prices', 'fx'], thanks: [] }[st.tab];
+    var rkId = st.rankMode === 'prov' ? 'aa_providers' : st.rankMode === 't2i' ? 'aa_t2i' : st.rankMode === 't2v' ? 'aa_t2v' : 'aa';
+    var ids = { rank: [rkId], price: ['prices', 'fx'], value: ['aa', 'prices'], usage: [], more: ['aa', 'prices', 'fx'], thanks: [] }[st.tab];
     var all = Object.keys(C.sources).map(function (k) { return C.sources[k]; });
-    var rel = ids.length ? ids.map(function (k) { return C.sources[k]; }) : all;
+    var rel = ids.length ? ids.map(function (k) { return C.sources[k]; }).filter(Boolean) : all;
     var busy = all.some(function (s) { return s.refreshing; });
     var err = rel.some(function (s) { return s.error; });
     var dead = rel.some(function (s) { return s.error && !s.data; });
@@ -200,17 +209,33 @@
     ms.forEach(function (m) { var k = m.releaseName || m.name; if (!best[k] || (m.intelligenceIndex || 0) > (best[k].intelligenceIndex || 0)) best[k] = m; });
     return Object.keys(best).map(function (k) { return best[k]; });
   }
+  function rawVariant(m) {
+    if (m.variant) return String(m.variant);
+    var mm = String(m.name || '').match(/\(([^()]+)\)\s*$/);
+    if (mm && /\b(non-reasoning|reasoning|xhigh|max|high|medium|low|minimal|adaptive)\b/i.test(mm[1])) return mm[1];
+    return '';
+  }
   function effortName(m) {
-    var v = String(m.variant || '').toLowerCase();
+    var raw = rawVariant(m), v = raw.toLowerCase();
     if (!v) return '默认';
-    if (v.indexOf('non-reasoning') >= 0) return '不思考';
-    if (v.indexOf('xhigh') >= 0) return '极高';
-    if (v.indexOf('max') >= 0) return '最高';
-    if (v.indexOf('high') >= 0) return '高';
-    if (v.indexOf('medium') >= 0) return '中';
-    if (v.indexOf('low') >= 0) return '低';
-    if (v.indexOf('reasoning') >= 0) return '思考';
-    return String(m.variant).split(',')[0];
+    var nonR = v.indexOf('non-reasoning') >= 0;
+    var lvl = v.indexOf('xhigh') >= 0 ? '极高'
+      : /\bmax\b/.test(v) ? '最高'
+      : /\bhigh\b/.test(v) ? '高'
+      : /\bmedium\b/.test(v) ? '中'
+      : /\bminimal\b/.test(v) ? '极低'
+      : /\blow\b/.test(v) ? '低'
+      : /\badaptive\b/.test(v) ? '自适应' : '';
+    var out = nonR ? (lvl ? '不思考 · ' + lvl : '不思考')
+      : lvl ? lvl
+      : v.indexOf('reasoning') >= 0 ? '思考'
+      : raw.split(',')[0].trim();
+    // 保留除 Default Fallback / Based on / 档位词之外的附加标签（如 Daybreak Blue）
+    var extras = raw.split(',').map(function (s) { return s.trim(); }).filter(function (s) {
+      return s && !/^(default fallback|non-reasoning|reasoning|xhigh|max|high|medium|low|minimal|adaptive)$/i.test(s) && !/^based on\b/i.test(s);
+    });
+    if (extras.length && out !== extras[0]) out += ' · ' + extras[0];
+    return out;
   }
   function variantsOf(m) {
     var aa = C.sources.aa.data; if (!aa) return [m];
@@ -242,7 +267,7 @@
     ev.sort(function (a, b) { return a.n < b.n ? -1 : 1; });
     var p = findPrice(m), vs = variantsOf(m);
     var html = '<h2 class="h2lg">' + logo(m.creatorName, 'lg2') + '<span>' + esc(m.releaseName || m.name) + '</span></h2>' +
-      '<p class="mut" style="margin:-4px 0 10px;font-size:12.5px">' + esc(m.creatorName || '') + (m.releaseDate ? ' · ' + esc(m.releaseDate) + ' 发布' : '') + (m.variant ? ' · ' + esc(effortName(m)) + '档' : '') + '</p>' +
+      '<p class="mut" style="margin:-4px 0 10px;font-size:12.5px">' + esc(m.creatorName || '') + (m.releaseDate ? ' · ' + esc(m.releaseDate) + ' 发布' : '') + (rawVariant(m) ? ' · ' + esc(effortName(m)) + '档' : '') + '</p>' +
       '<div class="kv"><span>综合智能指数</span><span>' + fmtNum(m.intelligenceIndex) + (m.intelligenceRank ? '（第 ' + m.intelligenceRank + ' 名）' : '') + '</span></div>' +
       '<div class="kv"><span>输入 / 输出（每百万字）</span><span>' + C.money(m.priceInputPer1M) + ' / ' + C.money(m.priceOutputPer1M) + '</span></div>' +
       '<div class="kv"><span>混合价（' + C.settings.blend + ':1）</span><span>' + C.money(blendPrice(m)) + '</span></div>' +
@@ -280,8 +305,11 @@
   }
 
   VIEWS.rank = function () {
+    var topSeg = subMod.segHtml([['llm', '大语言'], ['prov', '供应商速度'], ['t2i', '生图'], ['t2v', '视频']], st.rankMode, 'data-rm');
+    if (st.rankMode === 'prov') return subMod.viewProviders(topSeg);
+    if (st.rankMode === 't2i' || st.rankMode === 't2v') return subMod.viewMedia(topSeg, st.rankMode);
     var aa = C.sources.aa.data;
-    if (!aa) { page.innerHTML = empty('正在获取榜单', '联网完成后会自动显示'); return; }
+    if (!aa) { page.innerHTML = topSeg + empty('正在获取榜单', '联网完成后会自动显示'); subMod.bindSeg('.seg', 'data-rm', 'rankMode'); return; }
     var ms = aa.models;
     var all = METRICS.concat(capMetrics(), evalMetrics(aa)).filter(function (m) { return aa.models.some(function (x) { return m.blend ? blendPrice(x) != null : x[m.f] != null; }); });
     var met = all.filter(function (m) { return m.k === st.metric; })[0] || all[0];
@@ -297,7 +325,7 @@
     var max = 0, min = Infinity; rows.forEach(function (m) { var v = metricVal(m, met); if (v > max) max = v; if (v < min) min = v; });
     var shown = rows.slice(0, st.rankLimit || 60);
 
-    var html = '<div class="chips">' + all.map(function (m) { return '<button class="chip' + (m.k === met.k ? ' on' : '') + '" data-m="' + m.k + '">' + esc(m.n) + '</button>'; }).join('') + '</div>' +
+    var html = topSeg + '<div class="chips">' + all.map(function (m) { return '<button class="chip' + (m.k === met.k ? ' on' : '') + '" data-m="' + m.k + '">' + esc(m.n) + '</button>'; }).join('') + '</div>' +
       '<div class="tools wrap"><input class="search" id="q" placeholder="搜索模型或厂商" value="' + esc(st.q) + '">' +
       '<button class="tog' + (st.favOnly ? ' on' : '') + '" id="fav">自选</button>' +
       '<button class="tog' + (allTiers ? ' on' : '') + '" id="allv">全档位</button>' +
@@ -323,6 +351,7 @@
     }
     if (rows.length > shown.length) html += '<div class="morewrap"><button class="btn sm" id="moreRank">再看 ' + Math.min(40, rows.length - shown.length) + ' 个</button></div>';
     page.innerHTML = html;
+    subMod.bindSeg('.seg', 'data-rm', 'rankMode');
 
     page.querySelector('.chips').addEventListener('click', function (e) { var b = e.target.closest('[data-m]'); if (b) { st.metric = b.getAttribute('data-m'); render(); } });
     $('#q').addEventListener('input', debounce(function (e) { st.q = e.target.value; var pos = e.target.selectionStart; render(); var q = $('#q'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
@@ -377,8 +406,11 @@
   }
 
   VIEWS.price = function () {
+    var topSeg = subMod.segHtml([['prov', '按平台'], ['cmp', '按模型比价'], ['plans', '订阅套餐']], st.priceMode, 'data-pm');
+    if (st.priceMode === 'cmp') return subMod.viewPriceCompare(topSeg);
+    if (st.priceMode === 'plans') return subMod.viewPlans(topSeg);
     var d = C.sources.prices.data;
-    if (!d) { page.innerHTML = empty('正在获取价格', ''); return; }
+    if (!d) { page.innerHTML = topSeg + empty('正在获取价格', ''); subMod.bindSeg('.seg', 'data-pm', 'priceMode'); return; }
     var pins = C.settings.pinned.filter(function (id) { return d.providers[id]; });
     if (!st.provider || !d.providers[st.provider]) st.provider = pins[0] || Object.keys(d.providers)[0];
     var p = d.providers[st.provider];
@@ -391,7 +423,7 @@
     rows.sort(function (a, b) { return key(a) - key(b); });
     var pShown = rows.slice(0, st.rankLimit || 60);
 
-    var html = '<div class="chips">' + pins.map(function (id) { return '<button class="chip' + (id === st.provider ? ' on' : '') + '" data-p="' + id + '">' + esc(provName(d.providers[id])) + '</button>'; }).join('') + '<button class="chip" id="morep">＋ 更多平台</button></div>' +
+    var html = topSeg + '<div class="chips">' + pins.map(function (id) { return '<button class="chip' + (id === st.provider ? ' on' : '') + '" data-p="' + id + '">' + esc(provName(d.providers[id])) + '</button>'; }).join('') + '<button class="chip" id="morep">＋ 更多平台</button></div>' +
       '<div class="tools"><input class="search" id="pq" placeholder="搜索 ' + esc(provName(p)) + '" value="' + esc(st.pq) + '">' +
       (nFree ? '<button class="tog' + (st.showFree ? ' on' : '') + '" id="fr">免费 ' + nFree + '</button>' : '') +
       '<select class="tog" id="so"><option value="in"' + (st.sort === 'in' ? ' selected' : '') + '>按输入价</option><option value="out"' + (st.sort === 'out' ? ' selected' : '') + '>按输出价</option><option value="blend"' + (st.sort === 'blend' ? ' selected' : '') + '>按混合价</option><option value="new"' + (st.sort === 'new' ? ' selected' : '') + '>最新发布</option></select></div>' +
@@ -404,6 +436,7 @@
     }).join('') + '</div>' : '<div class="empty"><b>没有符合的模型</b><div class="btns"><button class="btn sm" id="clrFp">清除筛选</button></div></div>';
     if (rows.length > pShown.length) html += '<div class="morewrap"><button class="btn sm" id="morePrice">再看 ' + Math.min(40, rows.length - pShown.length) + ' 个</button></div>';
     page.innerHTML = html;
+    subMod.bindSeg('.seg', 'data-pm', 'priceMode');
 
     page.querySelector('.chips').addEventListener('click', function (e) { var b = e.target.closest('[data-p]'); if (b) { st.provider = b.getAttribute('data-p'); st.pq = ''; st.rankLimit = 60; render(); } if (e.target.id === 'morep') providerPicker(); });
     $('#pq').addEventListener('input', debounce(function (e) { st.pq = e.target.value; st.rankLimit = 60; var pos = e.target.selectionStart; render(); var q = $('#pq'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
@@ -416,8 +449,10 @@
 
   // ================= 性价比 =================
   VIEWS.value = function () {
+    var topSeg = subMod.segHtml([['chart', '前沿排行'], ['calc', '预算选型 / 算账']], st.valMode, 'data-vm');
+    if (st.valMode === 'calc') return subMod.viewCalc(topSeg);
     var aa = C.sources.aa.data;
-    if (!aa) { page.innerHTML = empty('正在获取榜单', ''); return; }
+    if (!aa) { page.innerHTML = topSeg + empty('正在获取榜单', ''); subMod.bindSeg('.seg', 'data-vm', 'valMode'); return; }
     var pts = dedupeVariants(aa.models).filter(function (m) { var p = blendPrice(m); return m.intelligenceIndex != null && p > 0; });
     var fr = N.frontier(pts.map(function (m) { return { x: blendPrice(m), y: m.intelligenceIndex, m: m }; }));
     var frSet = {}; fr.forEach(function (p) { frSet[p.m.id] = 1; });
@@ -426,7 +461,7 @@
     if (st.vq) { var q = st.vq.toLowerCase(); rows = rows.filter(function (r) { return (r.m.name + ' ' + r.m.creatorName).toLowerCase().indexOf(q) >= 0; }); }
     var vShown = rows.slice(0, st.rankLimit || 60);
 
-    var html = '<div class="pad"><div class="chartbox">' +
+    var html = topSeg + '<div class="pad"><div class="chartbox">' +
       '<div class="chart-hd"><b>价格与智能前沿</b><span>点圆点看模型详情</span></div>' +
       '<canvas id="cv"></canvas>' +
       '<div class="chartlg"><span><i class="z"></i>同价位最强</span><span><i class="d"></i>其他模型</span><span class="tip">越靠左上越划算</span></div></div></div>' +
@@ -446,6 +481,7 @@
     }
     if (rows.length > vShown.length) html += '<div class="morewrap"><button class="btn sm" id="moreVal">再看 ' + Math.min(40, rows.length - vShown.length) + ' 个</button></div>';
     page.innerHTML = html;
+    subMod.bindSeg('.seg', 'data-vm', 'valMode');
 
     $('#vq').addEventListener('input', debounce(function (e) { st.vq = e.target.value; st.rankLimit = 60; var pos = e.target.selectionStart; render(); var q = $('#vq'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
     if ($('#moreVal')) $('#moreVal').onclick = function () { st.rankLimit += 40; render(); };
@@ -469,7 +505,8 @@
     }
   };
 
-  // ---------- 注册额度/更多/赞赏页并启动 ----------
+  // ---------- 注册子视图与额度/更多/赞赏页并启动 ----------
+  subMod = w.registerSubViews({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, debounce: debounce, modelSheet: modelSheet });
   moreMod = w.registerMoreViews({ page: page, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, go: go });
   VIEWS.usage = moreMod.usage; VIEWS.more = moreMod.more; VIEWS.thanks = moreMod.thanks;
 
