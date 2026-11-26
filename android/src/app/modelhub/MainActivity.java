@@ -392,6 +392,7 @@ public class MainActivity extends Activity {
                         long total = c.getContentLength();
                         java.io.InputStream in = c.getInputStream();
                         java.io.FileOutputStream o = new java.io.FileOutputStream(tmp);
+                        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
                         byte[] buf = new byte[65536];
                         long got = 0;
                         long lastPush = 0;
@@ -399,10 +400,11 @@ public class MainActivity extends Activity {
                         boolean pk = false;
                         while ((n = in.read(buf)) > 0) {
                             if (!pk) {
-                                pk = buf[0] == 'P' && buf[1] == 'K';
+                                pk = n >= 2 && buf[0] == 'P' && buf[1] == 'K';
                                 if (!pk) throw new java.io.IOException("下载到的不是安装包");
                             }
                             o.write(buf, 0, n);
+                            md.update(buf, 0, n);
                             got += n;
                             // 最多 400ms 回一次进度，免得把 WebView 的 JS 队列灌爆
                             long tnow = System.currentTimeMillis();
@@ -414,12 +416,17 @@ public class MainActivity extends Activity {
                         }
                         o.close();
                         in.close();
+                        if (got < 4096) throw new java.io.IOException("下载文件过小");
                         if (total > 0 && got != total) throw new java.io.IOException("下载不完整");
                         js("window.__apkProgress(" + JSONObject.quote(id) + "," + got + "," + total + ")");
+                        byte[] dig = md.digest();
+                        StringBuilder hex = new StringBuilder(64);
+                        for (byte b : dig) hex.append(String.format("%02x", b & 0xff));
                         if (dst.exists()) dst.delete();
                         if (!tmp.renameTo(dst)) throw new java.io.IOException("保存失败");
                         out.put("ok", true);
                         out.put("bytes", got);
+                        out.put("sha256", hex.toString());
                     } catch (Throwable t) {
                         try { tmp.delete(); } catch (Exception ignored) { }
                         try {

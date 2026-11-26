@@ -3,6 +3,39 @@
   'use strict';
   var C = w.Core;
   var UA_ANDROID = 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+  var SEED_CDNS = [
+    'https://fastly.jsdelivr.net/gh/xuyuan985-star/model-hub@main/web/seed/',
+    'https://testingcf.jsdelivr.net/gh/xuyuan985-star/model-hub@main/web/seed/',
+    'https://cdn.jsdelivr.net/gh/xuyuan985-star/model-hub@main/web/seed/'
+  ];
+
+  /** 免梯国内镜像快照兜底：直连官网超时或用户选了「国内镜像」时，从 jsDelivr 拉取最新仓库快照。 */
+  C.fetchMirrorSeed = function (id) {
+    var i = 0, lastErr = '国内镜像暂时不可用';
+    function next() {
+      if (i >= SEED_CDNS.length) return Promise.reject(new Error(lastErr));
+      var u = SEED_CDNS[i++] + id + '.json?t=' + Math.floor(Date.now() / 300000);
+      return C.net(u, { timeoutMs: 18000, headers: { Accept: 'application/json', 'User-Agent': UA_ANDROID } }).then(function (r) {
+        if (!r.status || r.status >= 400) { lastErr = r.error || ('镜像返回 ' + r.status); return next(); }
+        try {
+          var j = JSON.parse(r.body);
+          if (j && j.data) return { data: j.data, meta: { via: '国内镜像', seedAt: j.fetchedAt || Date.now(), netMs: r.ms } };
+        } catch (e) {}
+        lastErr = '镜像内容异常';
+        return next();
+      });
+    }
+    return next();
+  };
+
+  /** 根据用户「数据线路」偏好决定是直连优先+镜像兜底，还是直接走国内镜像。 */
+  C.withMirrorFallback = function (id, directFn) {
+    if (C.settings.dataRoute === 'mirror') return C.fetchMirrorSeed(id);
+    return directFn().catch(function (err) {
+      if (C.settings.dataRoute === 'direct') throw err;
+      return C.fetchMirrorSeed(id).catch(function () { throw err; });
+    });
+  };
 
   // ----- 变动记录（新模型 / 价格变化），最多保留 100 条 -----
   var feed = C.store.get('feed.json', []);
@@ -21,18 +54,20 @@
     id: 'aa', title: 'AA 榜单', ttlMin: function () { return C.settings.aaMode === 'api' ? 240 : 60; }, url: 'https://artificialanalysis.ai',
     fetch: function () {
       if (C.settings.aaMode === 'api') return w.AaApi.fetchAll();
-      var src = w.AAParse.SOURCES.leaderboard;
-      var h = {}; Object.keys(src.headers).forEach(function (k) { h[k] = src.headers[k]; });
-      h['User-Agent'] = UA_ANDROID;
-      return C.net(src.url, { headers: h, timeoutMs: 30000 }).then(function (r) {
-        if (!r.status) throw new Error('没能连上 AA 网站：' + (r.error || '网络不通'));
-        if (r.status >= 400) throw new Error('AA 网站返回 ' + r.status + (r.status === 403 || r.status === 429 ? '（访问被限制，稍后再试）' : ''));
-        return new Promise(function (res) { setTimeout(function () { res(r); }, 0); });
-      }).then(function (r) {
-        var t0 = Date.now();
-        var out = w.AAParse.parseAA(r.body);
-        if (!out.ok) throw new Error('AA 页面结构可能变了，没能解析（' + (out.errorMessage || out.error) + '）。已保留旧数据。');
-        return { data: { models: out.models, evals: out.evals, meta: out.meta }, meta: { bytes: r.bytes, netMs: r.ms, parseMs: Date.now() - t0 } };
+      return C.withMirrorFallback('aa', function () {
+        var src = w.AAParse.SOURCES.leaderboard;
+        var h = {}; Object.keys(src.headers).forEach(function (k) { h[k] = src.headers[k]; });
+        h['User-Agent'] = UA_ANDROID;
+        return C.net(src.url, { headers: h, timeoutMs: 22000 }).then(function (r) {
+          if (!r.status) throw new Error('没能连上 AA 网站：' + (r.error || '网络不通'));
+          if (r.status >= 400) throw new Error('AA 网站返回 ' + r.status + (r.status === 403 || r.status === 429 ? '（访问被限制，稍后再试）' : ''));
+          return new Promise(function (res) { setTimeout(function () { res(r); }, 0); });
+        }).then(function (r) {
+          var t0 = Date.now();
+          var out = w.AAParse.parseAA(r.body);
+          if (!out.ok) throw new Error('AA 页面结构可能变了，没能解析（' + (out.errorMessage || out.error) + '）。已保留旧数据。');
+          return { data: { models: out.models, evals: out.evals, meta: out.meta }, meta: { bytes: r.bytes, netMs: r.ms, parseMs: Date.now() - t0, via: '直连' } };
+        });
       });
     },
     onChange: function (a, b) {
@@ -47,24 +82,26 @@
     }
   });
 
-  // ----- 价格（models.dev，约 7MB，用 ETag 避免重复下载；只保存瘦身后的版本） -----
+  // ----- 价格（models.dev，约 7MB，用 ETag 避免重复下载；无梯时自动走国内镜像快照） -----
   C.defSource({
     id: 'prices', title: '模型价格', ttlMin: 360, url: 'https://models.dev',
     fetch: function (s, force) {
-      var h = { 'User-Agent': UA_ANDROID };
-      if (!force && s.meta && s.meta.etag) h['If-None-Match'] = s.meta.etag;
-      return C.net('https://models.dev/api.json', { headers: h, timeoutMs: 60000 }).then(function (r) {
-        if (!r.status) throw new Error('没能连上价格数据源：' + (r.error || '网络不通'));
-        if (r.status === 304) return { notModified: true, meta: s.meta };
-        if (r.status >= 400) throw new Error('价格数据源返回 ' + r.status);
-        return new Promise(function (res) { setTimeout(function () { res(r); }, 0); });
-      }).then(function (r) {
-        if (r.notModified) return r;
-        var md = JSON.parse(r.body);
-        var data = w.Norm.trimModelsDev(md);
-        var n = Object.keys(data.providers).length;
-        if (n < 20) throw new Error('价格数据异常（只有 ' + n + ' 家提供商），已保留旧数据');
-        return { data: data, meta: { etag: r.headers && r.headers.etag, bytes: r.bytes, netMs: r.ms } };
+      return C.withMirrorFallback('prices', function () {
+        var h = { 'User-Agent': UA_ANDROID };
+        if (!force && s.meta && s.meta.etag) h['If-None-Match'] = s.meta.etag;
+        return C.net('https://models.dev/api.json', { headers: h, timeoutMs: 45000 }).then(function (r) {
+          if (!r.status) throw new Error('没能连上价格数据源：' + (r.error || '网络不通'));
+          if (r.status === 304) return { notModified: true, meta: s.meta };
+          if (r.status >= 400) throw new Error('价格数据源返回 ' + r.status);
+          return new Promise(function (res) { setTimeout(function () { res(r); }, 0); });
+        }).then(function (r) {
+          if (r.notModified) return r;
+          var md = JSON.parse(r.body);
+          var data = w.Norm.trimModelsDev(md);
+          var n = Object.keys(data.providers).length;
+          if (n < 20) throw new Error('价格数据异常（只有 ' + n + ' 家提供商），已保留旧数据');
+          return { data: data, meta: { etag: r.headers && r.headers.etag, bytes: r.bytes, netMs: r.ms, via: '直连' } };
+        });
       });
     },
     onChange: function (a, b) {

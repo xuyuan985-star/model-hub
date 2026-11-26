@@ -63,7 +63,8 @@
     theme: 'auto', currency: 'USD', blend: 3,
     pinned: ['opencode', 'opencode-go', 'commandcode'],
     favorites: [], catalogUrl: '', aaDedupe: true,
-    est: { inM: 20, outM: 5 }, aaMode: 'scrape'
+    est: { inM: 20, outM: 5 }, aaMode: 'scrape',
+    updateMirror: 'auto', customMirror: '', dataRoute: 'auto', showNewsBar: true
   };
   core.settings = Object.assign({}, defaults, core.store.get('settings.json', {}));
   core.saveSettings = function (patch) {

@@ -1,0 +1,10 @@
+{
+  "version": "1.1.0",
+  "tag": "v1.1.0",
+  "apkName": "modelhub.apk",
+  "apkUrl": "https://github.com/xuyuan985-star/model-hub/releases/download/v1.1.0/modelhub.apk",
+  "size": 805846,
+  "sha256": "9ce54667337a0b1ed9fdd20a76358ab7006a8e865e2dd06ff4ed0f884230a7c7",
+  "publishedAt": "2026-11-21T04:11:47Z",
+  "notes": "模型行情 v1.1.0\n\n**新增与修复**\n- **榜单扩展**：顶部新增「供应商速度 / 生图 / 视频」切换，支持 490+ API 托管节点测速排行与文生图/文生视频排行。\n- **修复 AA 官方接口档位**：恢复最高 / 极高 / 高 / 中 / 低等档位名。\n- **跨平台同模型比价与订阅套餐**：聚合 860+ 款跨平台模型，内置 od / cc / oc 主流订阅套餐。\n- **预算选型向导、对比分享图、额度测速预警与配置备份**。"
+}

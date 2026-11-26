@@ -132,14 +132,17 @@
     });
   }
 
-  // 注册三个按需数据源（lazy: true，启动时不自动拉取，点到对应标签才拉）
+  // 注册三个按需数据源（lazy: true，启动时不自动拉取，点到对应标签才拉；直连超时自动回退国内镜像快照）
   C.defSource({
     id: 'aa_providers', title: '供应商速度', ttlMin: 180, lazy: true,
     fetch: function () {
-      return C.net('https://artificialanalysis.ai/leaderboards/providers', { headers: { RSC: '1', 'User-Agent': UA }, timeoutMs: 35000 }).then(function (r) {
-        if (!r.status || r.status >= 400) throw new Error('未能获取供应商速度（' + (r.status || r.error || '网络不通') + '）');
-        return new Promise(function (res) { setTimeout(function () { res(r); }, 0); });
-      }).then(function (r) { return { data: E.parseProviders(r.body) }; });
+      var run = function () {
+        return C.net('https://artificialanalysis.ai/leaderboards/providers', { headers: { RSC: '1', 'User-Agent': UA }, timeoutMs: 24000 }).then(function (r) {
+          if (!r.status || r.status >= 400) throw new Error('未能获取供应商速度（' + (r.status || r.error || '网络不通') + '）');
+          return new Promise(function (res) { setTimeout(function () { res(r); }, 0); });
+        }).then(function (r) { return { data: E.parseProviders(r.body), meta: { via: '直连' } }; });
+      };
+      return C.withMirrorFallback ? C.withMirrorFallback('aa_providers', run) : run();
     }
   });
 
@@ -147,10 +150,13 @@
     C.defSource({
       id: 'aa_' + kind, title: kind === 't2i' ? '生图榜' : '视频榜', ttlMin: 360, lazy: true,
       fetch: function () {
-        if (C.settings.aaMode === 'api' && w.Native && w.Native.hasSecret && w.Native.hasSecret(w.AaApi.SECRET)) {
-          return fetchMediaApi(kind).catch(function () { return fetchMediaWeb(kind); });
-        }
-        return fetchMediaWeb(kind);
+        var run = function () {
+          if (C.settings.aaMode === 'api' && w.Native && w.Native.hasSecret && w.Native.hasSecret(w.AaApi.SECRET)) {
+            return fetchMediaApi(kind).catch(function () { return fetchMediaWeb(kind); });
+          }
+          return fetchMediaWeb(kind);
+        };
+        return C.withMirrorFallback ? C.withMirrorFallback('aa_' + kind, run) : run();
       }
     });
   });

@@ -174,10 +174,52 @@
     }
 
     // ================= 更多 =================
+    function mirrorSheet() {
+      var list = (w.Update && w.Update.MIRRORS) || [];
+      var cur = C.settings.updateMirror || 'auto';
+      var custom = C.settings.customMirror || '';
+      var html = '<h2>国内下载镜像与线路</h2>' +
+        '<p class="mut" style="margin:-4px 0 10px">默认优先走中国境内可直接访问的加速镜像，无需梯子即可检查和下载更新，并自带 SHA-256 完整性校验。</p>' +
+        '<label class="fld"><span>下载线路优先</span><select id="um">' +
+        '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>自动（国内加速镜像优先）</option>' +
+        list.map(function (m) { return '<option value="' + esc(m.id) + '"' + (cur === m.id ? ' selected' : '') + '>' + esc(m.name) + '</option>'; }).join('') +
+        '</select></label>' +
+        '<label class="fld"><span>自定义镜像前缀（可选）</span><input id="ucm" value="' + esc(custom) + '" placeholder="例如：https://你的代理域名/"></label>' +
+        '<div class="sec" style="padding:4px 0 6px">线路连通测速</div><div id="mTest"><p class="mut">点下方按钮一键测试当前网络下各镜像的耗时</p></div>' +
+        '<div class="btns"><button class="btn main" id="umSave">保存线路</button><button class="btn" id="umPing">测速</button><button class="btn" id="cl">关闭</button></div>';
+      openSheet(html, function () {
+        $('#cl').onclick = closeSheet;
+        $('#umSave').onclick = function () {
+          C.saveSettings({ updateMirror: $('#um').value, customMirror: $('#ucm').value.trim() });
+          closeSheet(); upCard(); toast('已保存下载线路');
+        };
+        $('#umPing').onclick = function () {
+          if (!w.Insights) return;
+          $('#mTest').innerHTML = '<p class="mut">正在并发测速…</p>';
+          var draw = function (rows) {
+            rows.sort(function (a, b) { return (b.ok - a.ok) || (a.ms - b.ms); });
+            var box = $('#mTest'); if (!box) return;
+            box.innerHTML = rows.map(function (r) {
+              return '<button class="m-row" data-pick="' + esc(r.id) + '"><span class="mn">' + esc(r.name) + '</span>' +
+                '<span class="ms ' + (r.ok ? 'good' : 'bad') + '">' + (r.ok ? r.ms + ' ms' : esc(r.error || '不可用')) + '</span></button>';
+            }).join('');
+            box.onclick = function (e) {
+              var b = e.target.closest('[data-pick]'); if (!b) return;
+              $('#um').value = b.getAttribute('data-pick');
+              toast('已选中该线路，点「保存线路」生效');
+            };
+          };
+          w.Insights.testMirrors(draw).then(draw);
+        };
+      });
+    }
+
     function doDownload(asset) {
       var last = 0;
       w.Update.download(asset, function (p) {
-        if (dlState && p.step > 1) { dlState.pct = 0; dlState.try = p.step; upCard(); }
+        if (!dlState) dlState = { pct: 0 };
+        dlState.pct = 0; dlState.try = p.step; dlState.via = p.name || '';
+        upCard();
       }, function (got, total) {
         var now = Date.now();
         if (now - last < 250 && got < total) return;
@@ -190,7 +232,7 @@
         if (!r.ok) { dlState = null; toast(r.error); upCard(); return; }
         if (dlState) { dlState.pct = 100; upCard(); }
         var res; try { res = JSON.parse(w.Native.installApk()); } catch (e) { res = { ok: false, error: String(e && e.message || e) }; }
-        if (res.ok) toast('按提示完成安装');
+        if (res.ok) toast('校验通过，按提示完成安装');
         else if (res.need === 'permission') toast('允许安装后返回再点一次下载');
         else toast(res.error || '未能拉起安装界面');
         setTimeout(function () { dlState = null; upCard(); }, 600);
@@ -200,26 +242,34 @@
     function upCard() {
       var el = $('#upcard'); if (!el) return;
       var Up = w.Update, v = Up.current(), l = Up.latest, d = dlState;
+      var pref = C.settings.updateMirror || 'auto';
+      var prefName = pref === 'auto' ? '国内加速自动' : ((Up.MIRRORS || []).filter(function (m) { return m.id === pref; })[0] || { name: pref }).name;
       var statusTag = Up.checking ? '<span class="tag">检查中…</span>'
         : l && l.newer ? '<span class="tag zhu">有新版 ' + esc(l.tag) + '</span>'
         : l ? '<span class="tag good">已是最新</span>' : '';
-      var h = '<div class="kv"><span>当前版本</span><span>' + esc(v) + (statusTag ? ' ' + statusTag : '') + '</span></div>';
+      var h = '<div class="kv"><span>当前版本</span><span>' + esc(v) + (statusTag ? ' ' + statusTag : '') + '</span></div>' +
+        '<div class="kv"><span>更新线路</span><span>' + esc(prefName) + (l && l.via ? ' · ' + esc(l.via) : '') + '</span></div>';
       if (!Up.checking && !l && Up.error) h += '<p class="mut" style="margin-top:6px">' + esc(Up.error.message) + '</p>';
       if (d) {
         var pct = Math.max(0, Math.min(100, d.pct || 0));
         h += '<div class="ptrack"><i class="pfill" style="width:' + pct + '%"></i></div>' +
-          '<p class="dlmsg">' + (pct >= 100 ? '下载完成，正在打开安装' : pct + '%' + (d.total ? ' · ' + sizeOf(d.total) : '') + (d.try > 1 ? ' · 线路 ' + d.try : '')) + '</p>';
+          '<p class="dlmsg">' + (pct >= 100 ? '下载与校验完成，正在打开安装' : pct + '%' + (d.total ? ' · ' + sizeOf(d.total) : '') + (d.via ? ' · ' + esc(d.via) : '')) + '</p>';
       }
       h += '<div class="btns">' +
         (l && l.newer
-          ? '<button class="btn sm main" id="dl"' + (d ? ' disabled' : '') + '>' + (d ? '下载中…' : '下载新版' + (l.apk ? '（' + sizeOf(l.apk.size) + '）' : '')) + '</button>'
+          ? '<button class="btn sm main" id="dl"' + (d ? ' disabled' : '') + '>' + (d ? '下载中…' : '镜像下载' + (l.apk ? '（' + sizeOf(l.apk.size) + '）' : '')) + '</button>'
           : '<button class="btn sm" id="ck">检查更新</button>') +
-        (l && l.newer && !l.apk ? '<button class="btn sm" id="pg">打开下载页</button>' : '') +
+        '<button class="btn sm" id="mir">选择线路</button>' +
+        (l && l.newer && l.apk ? '<button class="btn sm" id="cpUrl">复制链接</button>' : '') +
         (l && l.newer && l.notes ? '<button class="btn sm" id="rn">更新说明</button>' : '') +
         '</div>';
       el.innerHTML = h;
       if ($('#ck')) $('#ck').onclick = function () { toast('正在检查…'); Up.check().then(function (r) { upCard(); toast(r ? (r.newer ? '发现新版本 ' + r.tag : '已是最新') : '检查失败'); }); };
-      if ($('#pg')) $('#pg').onclick = function () { w.Native.openUrl(l.page); };
+      if ($('#mir')) $('#mir').onclick = mirrorSheet;
+      if ($('#cpUrl')) $('#cpUrl').onclick = function () {
+        var u = Up.copyUrl(l.apk);
+        if (u) { w.Native.copy(u); toast('已复制当前镜像下载地址'); }
+      };
       if ($('#rn')) $('#rn').onclick = function () {
         openSheet('<h2>更新说明 ' + esc(l.tag) + '</h2>' + X.notesHtml(l.notes) +
           '<div class="btns"><button class="btn" id="pg2">在浏览器打开</button><button class="btn" id="cl">关闭</button></div>', function () {
@@ -279,12 +329,15 @@
         '<div class="kv"><span>显示币种</span><select class="inline" id="cur"><option value="USD">美元 $</option><option value="CNY">人民币 ¥</option></select></div>' +
         '<div class="kv"><span>外观主题</span><select class="inline" id="th"><option value="auto">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>' +
         '<div class="kv"><span>混合价比例</span><select class="inline" id="bl"><option value="1">1 : 1</option><option value="3">3 : 1</option><option value="5">5 : 1</option><option value="10">10 : 1</option></select></div>' +
-        '<div class="kv"><span>榜单档位</span><select class="inline" id="dd"><option value="1">只留最高档</option><option value="0">全部档位</option></select></div></div>' +
+        '<div class="kv"><span>榜单档位</span><select class="inline" id="dd"><option value="1">只留最高档</option><option value="0">全部档位</option></select></div>' +
+        '<div class="kv"><span>榜单头条快讯</span><select class="inline" id="nb"><option value="1">显示</option><option value="0">隐藏</option></select></div>' +
+        '<div class="kv"><span>数据抓取线路</span><select class="inline" id="dr"><option value="auto">直连（失败走国内镜像）</option><option value="mirror">仅国内镜像（无梯推荐）</option><option value="direct">仅直连原站</option></select></div></div>' +
         '<div class="sec">版本与数据源</div><div class="card" id="upcard"></div><div class="card" id="aacard"></div>';
 
-      // 变动记录默认只放 3 条紧凑预览，点「全部」进弹层看，不把设置页挤满
-      html += '<div class="fhead"><span>最近变动</span>' +
-        (feed.length ? '<button class="fmore" id="fmore">全部 ' + feed.length + ' ›</button>' : '') + '</div>';
+      // 变动记录默认只放 3 条紧凑预览，点「全部」进弹层看，也可直达 AI 快讯页
+      html += '<div class="fhead"><span>最近变动与快讯</span><span>' +
+        '<button class="fmore" id="goNews" style="margin-right:12px">AI 快讯 ›</button>' +
+        (feed.length ? '<button class="fmore" id="fmore">调价 ' + feed.length + ' ›</button>' : '') + '</span></div>';
       html += feed.length
         ? '<div class="list boxed">' + feed.slice(0, 3).map(feedRow).join('') + '</div>'
         : '<div class="card"><p class="mut" style="margin:0">暂无变动。后续刷新若发现新模型或调价，会自动记在这里。</p></div>';
@@ -298,12 +351,17 @@
       page.innerHTML = html;
       $('#cur').value = C.settings.currency; $('#th').value = C.settings.theme;
       $('#bl').value = String(C.settings.blend); $('#dd').value = C.settings.aaDedupe ? '1' : '0';
+      $('#nb').value = C.settings.showNewsBar === false ? '0' : '1';
+      $('#dr').value = C.settings.dataRoute || 'auto';
       upCard(); aaCard();
+      if ($('#goNews')) $('#goNews').onclick = function () { go('news'); };
       if ($('#fmore')) $('#fmore').onclick = function () { openFeedSheet(feed); };
       $('#cur').onchange = function (e) { C.saveSettings({ currency: e.target.value }); render(); };
       $('#th').onchange = function (e) { C.saveSettings({ theme: e.target.value }); };
       $('#bl').onchange = function (e) { C.saveSettings({ blend: +e.target.value }); toast('已更新混合价比例'); };
       $('#dd').onchange = function (e) { C.saveSettings({ aaDedupe: e.target.value === '1' }); toast('已更新'); };
+      $('#nb').onchange = function (e) { C.saveSettings({ showNewsBar: e.target.value === '1' }); toast('已更新'); };
+      $('#dr').onchange = function (e) { C.saveSettings({ dataRoute: e.target.value }); toast('已切换数据线路'); };
       $('#au').onchange = function (e) { C.saveSettings({ alertUsd: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
       $('#ac').onchange = function (e) { C.saveSettings({ alertCny: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
       $('#rf').onclick = function () { toast('正在刷新…'); C.refreshAll(true).then(function (r) { toast(r.every(Boolean) ? '已刷新' : '部分数据未刷新成功'); render(); }); };

@@ -12,6 +12,14 @@
     if (!f) return '<i class="lg ph' + (cls ? ' ' + cls : '') + '">' + esc((name || '?').slice(0, 1)) + '</i>';
     return '<i class="lg' + (cls ? ' ' + cls : '') + '"><img src="assets/logos/' + f + '" alt="" loading="lazy"></i>';
   }
+  function searchBox(id, val, ph) {
+    return '<div class="sbox"><input class="search" id="' + id + '" placeholder="' + esc(ph) + '" value="' + esc(val || '') + '">' +
+      (val ? '<button class="sclr" data-clr="' + id + '" aria-label="清空">×</button>' : '') + '</div>';
+  }
+  function bindClr(page, id, key, render, resetLimit) {
+    var b = page.querySelector('[data-clr="' + id + '"]');
+    if (b) b.onclick = function () { resetLimit(); key(); render(); };
+  }
   function segHtml(items, cur, attr) {
     return '<div class="seg-wrap"><div class="seg">' + items.map(function (it) {
       return '<button class="' + (it[0] === cur ? 'on' : '') + '" ' + attr + '="' + it[0] + '">' + esc(it[1]) + '</button>';
@@ -75,7 +83,7 @@
         [['speed', '最快吐字'], ['ttft', '最低首字延迟'], ['price', '最省钱']].map(function (x) {
           return '<button class="chip' + (pSort === x[0] ? ' on' : '') + '" data-ps="' + x[0] + '">' + x[1] + '</button>';
         }).join('') + '</div>' +
-        '<div class="tools"><input class="search" id="provQ" placeholder="搜模型或托管商（如 DeepSeek、Groq）" value="' + esc(st.provQ || '') + '"></div>' +
+        '<div class="tools">' + searchBox('provQ', st.provQ, '搜模型或托管商（如 DeepSeek、Groq）') + '</div>' +
         '<div class="hint"><span>Artificial Analysis · ' + rows.length + ' 个托管节点</span><span>按模型搜可比各家速度</span></div>';
       html += shown.length ? '<div class="list">' + shown.map(function (r, i) {
         var val = pSort === 'speed' ? fmtNum(r.speed, 0) : pSort === 'ttft' ? fmtNum(r.ttft, 2) : C.money(r.pBlend);
@@ -93,6 +101,7 @@
       bindSeg('.seg', 'data-rm', 'rankMode');
       page.querySelector('.chips').addEventListener('click', function (e) { var b = e.target.closest('[data-ps]'); if (b) { st.provSort = b.getAttribute('data-ps'); st.rankLimit = 60; render(); } });
       $('#provQ').addEventListener('input', debounce(function (e) { st.provQ = e.target.value; st.rankLimit = 60; var pos = e.target.selectionStart; render(); var q = $('#provQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
+      bindClr(page, 'provQ', function () { st.provQ = ''; }, render, function () { st.rankLimit = 60; });
       if ($('#moreP')) $('#moreP').onclick = function () { st.rankLimit += 40; render(); };
       var lst = page.querySelector('.list');
       if (lst) lst.addEventListener('click', function (e) {
@@ -131,7 +140,7 @@
       var shown = rows.slice(0, st.rankLimit || 60);
       var maxE = rows.length ? rows[0].elo : 1300, minE = rows.length ? Math.max(800, rows[rows.length - 1].elo - 40) : 900;
       var html = topSeg +
-        '<div class="tools"><input class="search" id="mediaQ" placeholder="搜索' + (kind === 't2i' ? '生图' : '视频') + '模型或厂商" value="' + esc(st.mediaQ || '') + '"></div>' +
+        '<div class="tools">' + searchBox('mediaQ', st.mediaQ, '搜索' + (kind === 't2i' ? '生图' : '视频') + '模型或厂商') + '</div>' +
         '<div class="hint"><span>Artificial Analysis ' + (kind === 't2i' ? '文生图 Elo' : '文生视频 Elo') + ' · ' + rows.length + ' 款</span><span>' + (s.data.source === 'api' ? '官方接口' : '公开榜') + '</span></div>';
       html += shown.length ? '<div class="list">' + shown.map(function (r, i) {
         var pct = Math.max(6, 100 * (r.elo - minE) / Math.max(1, maxE - minE));
@@ -146,6 +155,7 @@
       page.innerHTML = html;
       bindSeg('.seg', 'data-rm', 'rankMode');
       $('#mediaQ').addEventListener('input', debounce(function (e) { st.mediaQ = e.target.value; st.rankLimit = 60; var pos = e.target.selectionStart; render(); var q = $('#mediaQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
+      bindClr(page, 'mediaQ', function () { st.mediaQ = ''; }, render, function () { st.rankLimit = 60; });
       if ($('#moreM')) $('#moreM').onclick = function () { st.rankLimit += 40; render(); };
       var lst = page.querySelector('.list');
       if (lst) lst.addEventListener('click', function (e) {
@@ -172,7 +182,7 @@
       }
       var shown = rows.slice(0, st.rankLimit || 50);
       var html = topSeg +
-        '<div class="tools"><input class="search" id="cmpQ" placeholder="搜模型名比全网价（如 Claude、DeepSeek、GLM）" value="' + esc(st.cmpQ || '') + '"></div>' +
+        '<div class="tools">' + searchBox('cmpQ', st.cmpQ, '搜模型名比全网价（如 Claude、DeepSeek、GLM）') + '</div>' +
         '<div class="hint"><span>' + rows.length + ' 款可跨平台比价模型</span><span>点击看所有平台报价</span></div>';
       html += shown.length ? '<div class="list">' + shown.map(function (g, i) {
         return '<button class="row" data-gi="' + i + '"><div class="mid"><div class="nm"><span class="nt">' + esc(g.name) + '</span></div>' +
@@ -185,6 +195,7 @@
       page.innerHTML = html;
       bindSeg('.seg', 'data-pm', 'priceMode');
       $('#cmpQ').addEventListener('input', debounce(function (e) { st.cmpQ = e.target.value; st.rankLimit = 50; var pos = e.target.selectionStart; render(); var q = $('#cmpQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
+      bindClr(page, 'cmpQ', function () { st.cmpQ = ''; }, render, function () { st.rankLimit = 50; });
       if ($('#moreG')) $('#moreG').onclick = function () { st.rankLimit += 40; render(); };
       var lst = page.querySelector('.list');
       if (lst) lst.addEventListener('click', function (e) {
