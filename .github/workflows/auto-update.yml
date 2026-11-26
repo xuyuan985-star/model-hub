@@ -1,0 +1,69 @@
+name: 自动更新 AI 快讯与榜单快照
+
+on:
+  schedule:
+    - cron: '15 */6 * * *'
+  issues:
+    types: [opened, edited, labeled, unlabeled, closed, reopened]
+  workflow_dispatch:
+    inputs:
+      refresh_seeds:
+        description: '同时刷新全部榜单与价格快照（yes/no）'
+        required: false
+        default: 'yes'
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: auto-update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: >-
+      github.event_name != 'issues' ||
+      github.event.issue.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取 main 分支
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 准备 Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 抓取并轮换 AI 快讯（可选 DeepSeek 润色）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+        run: node tools/build-news.mjs
+
+      - name: 每日自动刷新榜单与价格镜像快照（供国内无梯用户）
+        if: >-
+          github.event_name == 'workflow_dispatch' && inputs.refresh_seeds != 'no' ||
+          (github.event_name == 'schedule' && (github.event.schedule == '15 */6 * * *'))
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$HOUR" = "00" ] || [ "$HOUR" = "12" ]; then
+            node tools/build-seed.mjs || echo "快照刷新部分失败，保留上次快照"
+          fi
+
+      - name: 若数据有变化则自动提交到 main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/seed/news.json web/seed/aa.json web/seed/prices.json web/seed/fx.json web/seed/aa_providers.json web/seed/aa_t2i.json web/seed/aa_t2v.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: 自动更新 AI 快讯与数据快照"
+            git push origin main
+          else
+            echo "无新内容，跳过提交"
+          fi
