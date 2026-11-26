@@ -4,9 +4,11 @@
   var C = w.Core;
   var UA_ANDROID = 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
   var SEED_CDNS = [
+    'https://gh-proxy.org/https://raw.githubusercontent.com/xuyuan985-star/model-hub/main/web/seed/',
+    'https://gh-proxy.com/https://raw.githubusercontent.com/xuyuan985-star/model-hub/main/web/seed/',
+    'https://wget.la/https://raw.githubusercontent.com/xuyuan985-star/model-hub/main/web/seed/',
     'https://fastly.jsdelivr.net/gh/xuyuan985-star/model-hub@main/web/seed/',
-    'https://testingcf.jsdelivr.net/gh/xuyuan985-star/model-hub@main/web/seed/',
-    'https://cdn.jsdelivr.net/gh/xuyuan985-star/model-hub@main/web/seed/'
+    'https://testingcf.jsdelivr.net/gh/xuyuan985-star/model-hub@main/web/seed/'
   ];
 
   /** 免梯国内镜像快照兜底：直连官网超时或用户选了「国内镜像」时，从 jsDelivr 拉取最新仓库快照。 */

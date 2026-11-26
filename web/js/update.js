@@ -5,11 +5,13 @@
   var REPO = 'xuyuan985-star/model-hub';
   var API = 'https://api.github.com/repos/' + REPO + '/releases/latest';
 
-  // 国内可直接访问的元数据镜像（读取仓库根目录 latest.json，完全绕过 api.github.com）
+  // 国内可直接访问的实时元数据镜像（优先实时代理 raw，避免 jsDelivr 缓存延迟，最后保底 GitHub API）
+  var RAW_LATEST = 'https://raw.githubusercontent.com/' + REPO + '/main/latest.json';
   var META_URLS = [
+    { name: '国内实时镜像 1', url: 'https://gh-proxy.org/' + RAW_LATEST },
+    { name: '国内实时镜像 2', url: 'https://gh-proxy.com/' + RAW_LATEST },
     { name: 'jsDelivr 镜像', url: 'https://fastly.jsdelivr.net/gh/' + REPO + '@main/latest.json' },
     { name: 'CF 镜像', url: 'https://testingcf.jsdelivr.net/gh/' + REPO + '@main/latest.json' },
-    { name: 'jsDelivr CDN', url: 'https://cdn.jsdelivr.net/gh/' + REPO + '@main/latest.json' },
     { name: 'GitHub API', url: API, isApi: true }
   ];
 
@@ -80,10 +82,10 @@
     };
   }
 
-  /** 按用户所选线路偏好决定检查顺序：选「直连」时优先 GitHub API，默认「国内镜像」先查免梯 CDN。 */
+  /** 按用户所选线路偏好决定检查顺序：选「直连」时优先 GitHub API，默认「国内镜像」先查免梯实时镜像。 */
   function metaOrder() {
     var pref = C.settings.updateMirror || 'auto';
-    if (pref === 'direct') return [META_URLS[3], META_URLS[0], META_URLS[1], META_URLS[2]];
+    if (pref === 'direct') return [META_URLS[4], META_URLS[0], META_URLS[1], META_URLS[2], META_URLS[3]];
     return META_URLS;
   }
 
