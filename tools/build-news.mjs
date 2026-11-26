@@ -39,12 +39,22 @@ const FEEDS = [
 ];
 
 function decodeXml(s) {
-  return String(s || '')
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+  let t = String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+  // 跑两轮实体解码 + 去标签，彻底消灭双重转义（如 IT 之家的 &lt;p data-vmark=...&gt;）和十六进制实体
+  for (let pass = 0; pass < 2; pass++) {
+    t = t
+      .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n));
+  }
+  return t
+    .replace(/```[\s\S]*?```/g, ' ')
     .replace(/<[^>]+>/g, ' ')
+    .replace(/<[^>]*$/g, '')
     .replace(/\s+/g, ' ').trim();
 }
 
@@ -272,11 +282,10 @@ async function main() {
     if (!it.aiDone && !it.pin) toPolish.push(it);
   }
 
-  // 英文条目或摘要过长的中文条目才送去润色，最多每轮处理 24 条控成本
+  // 只要还没被 AI 处理过的新条目都送去提炼与去杂讯（增量处理，已润色过的以后直接复用，最多每轮 36 条）
   const needPolish = toPolish
-    .filter(x => x.lang === 'en' || x.title.length > 42 || !x.summary)
     .sort((a, b) => b.at - a.at)
-    .slice(0, 24);
+    .slice(0, 36);
   const llmStat = await polishWithLLM(needPolish);
 
   const items = [...merged.values()]

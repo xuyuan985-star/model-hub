@@ -9,14 +9,20 @@
   NS.customFeeds = C.store.get('custom-rss.json', []);
   NS.saveFeeds = function () { C.store.set('custom-rss.json', NS.customFeeds); };
 
-  function decodeXml(s) {
-    return String(s || '')
-      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ').trim();
+  function cleanText(s) {
+    var t = String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+    for (var pass = 0; pass < 2; pass++) {
+      t = t
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
+        .replace(/&#x([0-9a-f]+);/gi, function (_, h) { return String.fromCharCode(parseInt(h, 16)); })
+        .replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(+n); });
+    }
+    return t.replace(/```[\s\S]*?```/g, ' ').replace(/<[^>]+>/g, ' ').replace(/<[^>]*$/g, '').replace(/\s+/g, ' ').trim();
   }
+  function decodeXml(s) { return cleanText(s); }
   function tagText(block, tag) {
     var m = block.match(new RegExp('<' + tag + '(?:\\s[^>]*)?>([\\s\\S]*?)<\\/' + tag + '>', 'i'));
     return m ? decodeXml(m[1]) : '';
@@ -114,7 +120,7 @@
     }
     var badge = top.pin ? '<span class="nbadge pin">速报</span>' : '<span class="nbadge">快讯</span>';
     return '<div class="pad" style="margin-bottom:6px"><button class="news-bar" id="openNews">' +
-      badge + '<span class="ntxt">' + esc(top.title) + '</span><span class="nar">›</span></button></div>';
+      badge + '<span class="ntxt">' + esc(cleanText(top.title)) + '</span><span class="nar">›</span></button></div>';
   };
 
   function catLabel(c) {
@@ -193,14 +199,15 @@
           '<p>' + (cat === 'pin' ? '在 GitHub 仓库新建带「快讯」标签的 Issue，1 分钟内会自动推送到这里。' : '点右上角刷新或切换其他分类看看。') + '</p></div>';
       } else {
         html += '<div class="list">' + shown.map(function (x, i) {
+          var ct = cleanText(x.title), cs = cleanText(x.summary);
           return '<button class="row news-row' + (x.pin ? ' is-pin' : '') + '" data-ni="' + i + '">' +
             '<div class="mid">' +
             '<div class="news-meta">' +
               '<span class="tag' + (x.pin ? ' zhu' : x.local ? ' good' : '') + '">' + esc(x.pin ? '置顶速报' : x.src || catLabel(x.cat)) + '</span>' +
               '<span class="news-time">' + (x.at ? C.ago(x.at) : '') + '</span>' +
             '</div>' +
-            '<div class="news-title">' + esc(x.title) + '</div>' +
-            (x.summary ? '<div class="news-sum">' + esc(x.summary) + '</div>' : '') +
+            '<div class="news-title">' + esc(ct) + '</div>' +
+            (cs ? '<div class="news-sum">' + esc(cs) + '</div>' : '') +
             '</div></button>';
         }).join('') + '</div>';
       }
@@ -224,9 +231,10 @@
       if (lst) lst.addEventListener('click', function (e) {
         var b = e.target.closest('[data-ni]'); if (!b) return;
         var x = shown[+b.getAttribute('data-ni')];
-        openSheet('<h2>' + esc(x.title) + '</h2>' +
+        var ct = cleanText(x.title), cs = cleanText(x.summary);
+        openSheet('<h2>' + esc(ct) + '</h2>' +
           '<p class="mut" style="margin:-4px 0 10px;font-size:12.5px">' + esc(x.src || catLabel(x.cat)) + (x.at ? ' · ' + C.ago(x.at) : '') + '</p>' +
-          '<p style="margin:0 0 14px;line-height:1.65;color:var(--ink)">' + esc(x.summary || '暂无更多摘要，点下方按钮阅读原文。') + '</p>' +
+          '<p style="margin:0 0 14px;line-height:1.65;color:var(--ink)">' + esc(cs || '暂无更多摘要，点下方按钮阅读原文。') + '</p>' +
           '<div class="btns">' +
           (x.url ? '<button class="btn main" id="nOpen">阅读原文</button><button class="btn" id="nCopy">复制链接</button>' : '') +
           '<button class="btn" id="cl">关闭</button></div>', function () {
