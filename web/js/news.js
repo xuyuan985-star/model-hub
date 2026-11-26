@@ -160,11 +160,12 @@
     function viewNews() {
       var s = C.sources.news;
       var remote = (s && s.data && s.data.items) || [];
-      var all = remote.concat(localPriceItems());
-      all.sort(function (a, b) {
-        return (Number(!!b.pin) - Number(!!a.pin)) || (Number(!!b.urgent) - Number(!!a.urgent)) || ((b.at || 0) - (a.at || 0));
-      });
       var cat = st.newsCat || 'all';
+      var locals = localPriceItems();
+      var all = remote.concat(cat === 'model' ? locals : locals.slice(0, 2));
+      all.sort(function (a, b) {
+        return (Number(!!b.pin) - Number(!!a.pin)) || (Number(!!b.urgent) - Number(!!a.urgent)) || (Number(!!a.local) - Number(!!b.local)) || ((b.at || 0) - (a.at || 0));
+      });
       var cats = [
         ['all', '全部'],
         ['pin', '置顶速报'],
