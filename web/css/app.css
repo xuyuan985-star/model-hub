@@ -455,3 +455,6 @@ body.pod-gold .row.pod-1 .seal,body.pod-silver .row.pod-2 .seal,body.pod-bronze 
   body.pod-gold .row.pod-1::after,body.pod-silver .row.pod-2::after,body.pod-bronze .row.pod-3::after,
   body.pod-gold .row.pod-1 .seal,body.pod-silver .row.pod-2 .seal,body.pod-bronze .row.pod-3 .seal{animation:none}
 }
+
+/* 厂商国旗小图：模型行副标题里，紧跟厂商名 */
+.sub .flag{display:inline-block;width:13px;height:9px;margin-left:3px;vertical-align:-1px;border-radius:1px;box-shadow:0 0 0 .5px rgba(0,0,0,.18);object-fit:cover}

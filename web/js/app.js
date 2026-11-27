@@ -26,6 +26,11 @@
   function fmtCtx(n) { return !n ? '—' : n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : Math.round(n / 1000) + 'K'; }
   function debounce(f, ms) { var t; return function (a) { var self = this; clearTimeout(t); t = setTimeout(function () { f.call(self, a); }, ms); }; }
 
+  /** 厂商国旗小图（厂商名后面）；未收录国家的厂商不显示 */
+  function flagImg(creator) {
+    var src = w.CreatorFlag ? w.CreatorFlag.src(creator) : '';
+    return src ? '<img class="flag" src="' + src + '" alt="" loading="lazy">' : '';
+  }
   function logo(name, cls) {
     var f = w.LOGOS && w.LOGOS[name];
     if (!f) return '<i class="lg ph' + (cls ? ' ' + cls : '') + '">' + esc((name || '?').slice(0, 1)) + '</i>';
@@ -521,7 +526,7 @@
         var pod = (i < 3) ? ' pod pod-' + (i + 1) : '';
         return '<button class="row' + pod + (isFav(key) ? ' fav' : '') + '" data-i="' + i + '">' + (isFav(key) ? '<i class="gdot"></i>' : '') + seal(i + 1) +
           '<div class="mid"><div class="nm">' + logo(m.creatorName) + '<span class="nt">' + esc(title) + '</span></div>' +
-          '<div class="sub">' + esc(m.creatorName || '') + (tier ? ' · ' + esc(tier) : '') + (F.isOpen(m) ? ' · 开源' : '') + '</div>' +
+          '<div class="sub">' + esc(m.creatorName || '') + (flagImg(m.creatorName) ? ' ' + flagImg(m.creatorName) : '') + (tier ? ' · ' + esc(tier) : '') + (F.isOpen(m) ? ' · 开源' : '') + '</div>' +
           '<div class="bar-track"><div class="bar" style="width:' + w1.toFixed(1) + '%"></div></div></div>' +
           '<div class="val">' + vs + (unit ? '<small>' + unit + '</small>' : '') + '</div></button>';
       }).join('') + '</div>';
