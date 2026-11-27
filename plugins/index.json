@@ -38,22 +38,13 @@
       "path": "plugins/desktop-pet/mod.json"
     },
     {
-      "id": "night-hall",
-      "name": "夜宫",
+      "id": "palace",
+      "name": "宫殿",
       "version": "1.0.0",
       "author": "model-hub",
-      "description": "深夜宫殿舞厅背景，深色主题下使用，压暗遮罩，内容区保持可读。",
+      "description": "夜晚或白昼的宫殿舞厅背景，跟随深浅主题自动切换，列表与卡片改为透明底，只露出背景图。",
       "category": "ui",
-      "path": "plugins/night-hall/mod.json"
-    },
-    {
-      "id": "day-hall",
-      "name": "白昼宫",
-      "version": "1.0.0",
-      "author": "model-hub",
-      "description": "白天宫殿舞厅背景，浅色主题下使用，提亮遮罩，内容区保持可读。",
-      "category": "ui",
-      "path": "plugins/day-hall/mod.json"
+      "path": "plugins/palace/mod.json"
     }
   ]
 }

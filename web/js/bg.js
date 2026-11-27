@@ -5,7 +5,7 @@
 (function (w) {
   'use strict';
   var C = w.Core;
-  var BG_FILES = { 'bg-dark': true, 'bg-light': true };   // 与 mods.js 的 BACKGROUNDS 一致
+  var BG_FILES = { 'palace': true };   // 与 mods.js 的 BACKGROUNDS 一致：一套宫殿背景，深浅两张随主题切换
 
   var layer = null;
 
@@ -31,14 +31,17 @@
     }
     document.body.classList.add('has-bg');
     var el = ensure();
-    var dark = bg === 'bg-dark';
-    // 遮罩：深色背景压暗一层，浅色背景提亮一层，让列表文字保持可读
-    var veil = dark ? 'linear-gradient(rgba(11,15,24,.62),rgba(11,15,24,.72))' : 'linear-gradient(rgba(246,247,250,.78),rgba(246,247,250,.86))';
-    el.style.backgroundImage = veil + ', url(assets/backgrounds/' + bg + '.webp)';
+    // 深浅随应用主题：深色主题用夜宫图，浅色用白昼图
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var file = dark ? 'bg-dark' : 'bg-light';
+    // 遮罩很轻：大部分区域透出宫殿背景；文字区域的底色由 CSS 单独处理
+    var veil = dark ? 'linear-gradient(rgba(11,15,24,.28),rgba(11,15,24,.36))' : 'linear-gradient(rgba(246,247,250,.22),rgba(246,247,250,.30))';
+    el.style.backgroundImage = veil + ', url(assets/backgrounds/' + file + '.webp)';
   }
 
   C.on('background', sync);
   C.on('mods', sync);
+  C.on('settings', sync);   // 切换深/浅主题时重新选图
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sync);
   else sync();
   w.Background = { sync: sync };

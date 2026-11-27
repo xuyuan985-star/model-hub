@@ -37,7 +37,7 @@
   /** 内置宠物形象：清单只能引用名字，图由 web/assets/pets/<name>.svg 提供，不接受外部地址。 */
   var PETS = { 'whale-girl': { label: '鲸鱼娘' } };
   /** 内置背景：清单只能选名字，图由 web/assets/backgrounds/<name>.webp 提供。 */
-  var BACKGROUNDS = { 'bg-dark': { label: '深色夜宫' }, 'bg-light': { label: '浅色白昼' } };
+  var BACKGROUNDS = { 'palace': { label: '宫殿' } };
 
   function str(v, max) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
 

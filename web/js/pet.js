@@ -1,6 +1,8 @@
 /* pet.js — 宠物插件运行时：鲸鱼娘形象在屏幕内游走，有五种状态。
  * 状态：idle 待机 / walk 游走 / surprised 被点击 / drag 按住拖动 / sleep 长时间无操作后睡觉。
  * 形象来自内置表（web/assets/pets/pet-<state>.webp），清单只能选形象集名字，不接受外部地址。
+ * 走位思路（目标点 + 缓动、停顿后再选下一个目标）改写自 dsh-pet（MIT，PC2005-cloud/dsh-pet，
+ * src/client/pet/motion/walk.ts 的「按规划落点插值」思路）。本文件为独立实现，未复制其代码或美术。
  * 尊重「减少动态效果」：开启时只显示待机或睡觉，不游走。ES2019，面向 Chrome 91 WebView。
  */
 (function (w) {
@@ -14,6 +16,9 @@
 
   var el = null, timer = null, sleepTimer = null, surpriseTimer = null;
   var x = 0, y = 0, dx = 0.6, dy = 0.22;
+  // 走位：从当前点缓动到目标点，到达后停顿一会儿，再选下一个边缘目标
+  var tx = 0, ty = 0, walkT = 0, walkFrom = { x: 0, y: 0 }, restUntil = 0;
+  var WALK_MS = 2600, REST_MIN_MS = 1200, REST_MAX_MS = 3200;
   var state = 'idle', set = null, lastAct = Date.now();
   var pressTimer = null, dragging = false, dragOffX = 0, dragOffY = 0;
 
@@ -58,12 +63,32 @@
   }
 
   // ---------- 游走 ----------
+  // 选下一个目标：贴着屏幕左右边缘之一，高度在可用区域内随机。避开顶部标题与底部导航。
+  function pickTarget() {
+    var W = window.innerWidth, H = window.innerHeight;
+    var left = Math.random() < 0.5;
+    tx = left ? 8 : W - SIZE - 8;
+    ty = 60 + Math.random() * Math.max(1, H - 260);
+    walkFrom = { x: x, y: y };
+    walkT = 0;
+    dx = tx >= x ? 1 : -1;   // 朝向跟随移动方向
+  }
+
+  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }   // 缓入缓出
+
   function step() {
     if (dragging || state === 'sleep') return;
-    var W = window.innerWidth, H = window.innerHeight;
-    x += dx; y += dy;
-    if (x < 0 || x > W - SIZE) dx = -dx;
-    if (y < 40 || y > H - 180) dy = -dy;   // 避开顶部标题与底部导航
+    var now = Date.now();
+    if (now < restUntil) { setState('idle'); return; }   // 停顿中
+    if (!tx && !ty || walkT >= 1) {
+      // 到达或首次：停一小会儿，再开始下一段走位
+      if (walkT >= 1) { restUntil = now + REST_MIN_MS + Math.random() * (REST_MAX_MS - REST_MIN_MS); walkT = 0; setState('idle'); return; }
+      pickTarget();
+    }
+    walkT = Math.min(1, walkT + 40 / WALK_MS);
+    var e = ease(walkT);
+    x = walkFrom.x + (tx - walkFrom.x) * e;
+    y = walkFrom.y + (ty - walkFrom.y) * e;
     setState('walk');
     place();
   }
