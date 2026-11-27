@@ -81,6 +81,13 @@
   var mods_api = {
     validate: validate,
     list: function () { return Object.keys(mods).map(function (k) { return mods[k]; }); },
+    get: function (id) { return mods[id] || null; },
+    /** 语义版本比较：a 新于 b 返回 1，相等 0，旧于 -1。 */
+    cmpVersion: function (a, b) {
+      var x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number);
+      for (var i = 0; i < 3; i++) { var d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0 ? 1 : -1; }
+      return 0;
+    },
     get enabledId() { return state.enabled; },
     /** 导入一份清单（对象或 JSON 字符串）。同 id 覆盖。 */
     install: function (src) {

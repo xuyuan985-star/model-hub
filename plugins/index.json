@@ -4,10 +4,18 @@
     {
       "id": "ocean-blue",
       "name": "海蓝纸",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": "model-hub",
       "description": "把朱印红换成海蓝色，浅色与深色模式都有适配。",
       "path": "plugins/ocean-blue/mod.json"
+    },
+    {
+      "id": "rose-ink",
+      "name": "玫瑰墨",
+      "version": "1.0.0",
+      "author": "model-hub",
+      "description": "朱印换成玫瑰红，偏暖的纸色，适合夜间阅读。",
+      "path": "plugins/rose-ink/mod.json"
     }
   ]
 }

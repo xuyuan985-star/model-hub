@@ -3,7 +3,7 @@
   'use strict';
   var C = w.Core, N = w.Norm, X = w.Extra, esc = C.esc;
   var $ = function (s, r) { return (r || document).querySelector(s); };
-  var page = $('#page'), TABS = { rank: '榜单', price: '价格', news: 'AI 快讯', usage: '额度', more: '更多', thanks: '赞赏' };
+  var page = $('#page'), TABS = { rank: '榜单', price: '价格', news: 'AI 快讯', usage: '额度', more: '更多', thanks: '赞赏', workshop: '插件工坊' };
   var st = { tab: 'rank', rankMode: 'llm', priceMode: 'prov', metric: 'ii', q: '', favOnly: false, scope: 'all', creator: '', provider: null, sort: 'in', pq: '', vq: '', showFree: false, rankLimit: 60 };
   var sheetOpen = false;
 
@@ -85,7 +85,7 @@
   w.__onBack = function () {
     if (dlgOpen) { closeDlg(); return true; }
     if (sheetOpen) { closeSheet(); return true; }
-    if (st.tab === 'thanks') { go('more'); return true; }
+    if (st.tab === 'thanks' || st.tab === 'workshop') { go('more'); return true; }
     // 榜单页的各个子榜（中文评测/生图/视频）先退回「大语言」，再按一次才离开榜单页
     if (st.tab === 'rank' && st.rankMode !== 'llm') { st.rankMode = 'llm'; render(); return true; }
     // 价格页的子页同理退回「按平台」
@@ -226,7 +226,7 @@
   function go(tab) {
     if (st.tab !== tab) st.rankLimit = 60;
     st.tab = tab; $('#title').textContent = TABS[tab];
-    var hi = tab === 'thanks' ? 'more' : tab;
+    var hi = (tab === 'thanks' || tab === 'workshop') ? 'more' : tab;
     [].forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === hi); });
     render(); page.scrollTop = 0;
     if (topEl) topEl.classList.remove('scrolled');
@@ -242,7 +242,7 @@
 
   function updateSrc() {
     var rkId = st.rankMode === 'prov' ? 'aa_providers' : st.rankMode === 't2i' ? 'aa_t2i' : st.rankMode === 't2v' ? 'aa_t2v' : st.rankMode === 'cn' ? 'cn_bench' : 'aa';
-    var ids = { rank: [rkId], price: (st.priceMode === 'value' || st.priceMode === 'calc') ? ['aa', 'prices'] : ['prices', 'fx'], usage: [], more: ['aa', 'prices', 'fx'], thanks: [], news: ['news'] }[st.tab];
+    var ids = { rank: [rkId], price: (st.priceMode === 'value' || st.priceMode === 'calc') ? ['aa', 'prices'] : ['prices', 'fx'], usage: [], more: ['aa', 'prices', 'fx'], thanks: [], workshop: [], news: ['news'] }[st.tab];
     var all = Object.keys(C.sources).map(function (k) { return C.sources[k]; });
     var rel = ids.length ? ids.map(function (k) { return C.sources[k]; }).filter(Boolean) : all;
     var busy = all.some(function (s) { return s.refreshing; });
@@ -701,6 +701,7 @@
   moreMod = w.registerMoreViews({ page: page, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, go: go, openDlg: openDlg, closeDlg: closeDlg, pickDlg: pickDlg });
   moreMod.setUpdateDlg(updateDlg);
   VIEWS.usage = moreMod.usage; VIEWS.more = moreMod.more; VIEWS.thanks = moreMod.thanks;
+  if (w.registerWorkshopView) { var wsMod = w.registerWorkshopView({ page: page, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, go: go }); VIEWS.workshop = wsMod.view; }
   if (w.News) VIEWS.news = w.News.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, debounce: debounce, go: go });
   if (w.CnBench) VIEWS.cn = w.CnBench.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, render: render, debounce: debounce });
   if (w.TokenCalc) {
