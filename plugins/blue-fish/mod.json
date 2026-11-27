@@ -1,0 +1,10 @@
+{
+  "id": "blue-fish",
+  "name": "蓝鱼小宠",
+  "version": "1.0.0",
+  "author": "model-hub",
+  "description": "屏幕上游走的一条蓝色小鱼，点一下晃一晃。形象为原创占位图。",
+  "type": "pet",
+  "category": "ui",
+  "sprite": "blue-fish"
+}

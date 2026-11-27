@@ -34,6 +34,9 @@
     bronze: { cls: 'pod-bronze', label: '铜' }
   };
 
+  /** 内置宠物形象：清单只能引用名字，图由 web/assets/pets/<name>.svg 提供，不接受外部地址。 */
+  var PETS = { 'blue-fish': { label: '蓝鱼' } };
+
   function str(v, max) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
 
   /** 校验并规范化清单。返回 {ok, mod} 或 {ok:false, error}。 */
@@ -47,13 +50,18 @@
     if (!SEMVER_RE.test(version)) return { ok: false, error: 'version 需为 x.y.z 格式' };
     var cat = CATEGORIES[raw.category] ? raw.category : 'ui';
     var base = { id: id, name: name, version: version, author: str(raw.author, 30), description: str(raw.description, 120), category: cat };
+    if (raw.type === 'pet') {
+      if (!PETS[raw.sprite]) return { ok: false, error: '宠物形象只能是 ' + Object.keys(PETS).join(' / ') };
+      base.type = 'pet'; base.sprite = raw.sprite;
+      return { ok: true, mod: base };
+    }
     if (raw.type === 'effect') {
       // 效果插件只能从内置样式表里选，不接受任何自定义 CSS
       if (!EFFECTS[raw.style]) return { ok: false, error: '效果样式只能是 ' + Object.keys(EFFECTS).join(' / ') };
       base.type = 'effect'; base.style = raw.style;
       return { ok: true, mod: base };
     }
-    if (raw.type !== 'theme') return { ok: false, error: '暂只支持 type 为 theme 或 effect 的插件' };
+    if (raw.type !== 'theme') return { ok: false, error: '暂只支持 type 为 theme / effect / pet 的插件' };
     base.type = 'theme';
     base.light = pickVars(raw.light); base.dark = pickVars(raw.dark);
     if (!Object.keys(base.light).length && !Object.keys(base.dark).length) return { ok: false, error: '插件没有任何有效的颜色变量' };
@@ -71,13 +79,14 @@
   }
 
   // ---------- 已安装插件的存储 ----------
-  var state = C.store.get(STORE, { enabled: null, effect: null, list: [] });
-  if (!state || !Array.isArray(state.list)) state = { enabled: null, effect: null, list: [] };
+  var state = C.store.get(STORE, { enabled: null, effect: null, pet: null, list: [] });
+  if (!state || !Array.isArray(state.list)) state = { enabled: null, effect: null, pet: null, list: [] };
   if (state.effect === undefined) state.effect = null;
+  if (state.pet === undefined) state.pet = null;
   var mods = {};
   state.list.forEach(function (m) { var r = validate(m); if (r.ok) mods[r.mod.id] = r.mod; });
 
-  function save() { C.store.set(STORE, { enabled: state.enabled, effect: state.effect, list: Object.keys(mods).map(function (k) { return mods[k]; }) }); C.emit('mods'); }
+  function save() { C.store.set(STORE, { enabled: state.enabled, effect: state.effect, pet: state.pet, list: Object.keys(mods).map(function (k) { return mods[k]; }) }); C.emit('mods'); }
 
   /** 把当前启用的主题覆盖写入页面（<style id="modStyle">，在 app.css 之后生效） */
   function apply() {
@@ -117,6 +126,16 @@
     CATEGORIES: CATEGORIES,
     get enabledId() { return state.enabled; },
     get effectId() { return state.effect; },
+    get petId() { return state.pet; },
+    PETS: PETS,
+    /** 启用/停用宠物（与主题、效果独立）。传 null 关闭。 */
+    enablePet: function (id) {
+      if (id && (!mods[id] || mods[id].type !== 'pet')) return false;
+      state.pet = id || null;
+      save(); apply();
+      C.emit('pet');
+      return true;
+    },
     /** 启用/停用效果插件（与主题独立）。传 null 关闭效果。 */
     enableEffect: function (id) {
       if (id && (!mods[id] || mods[id].type !== 'effect')) return false;
@@ -139,6 +158,7 @@
       delete mods[id];
       if (state.enabled === id) state.enabled = null;
       if (state.effect === id) state.effect = null;
+      if (state.pet === id) state.pet = null;
       save(); apply();
       return true;
     },

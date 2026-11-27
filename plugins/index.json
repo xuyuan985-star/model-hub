@@ -27,6 +27,15 @@
       "description": "榜单前三名加金、银、铜的殿堂式底纹与金属边框，第一名金，第二名银，第三名铜。",
       "path": "plugins/hall-podium/mod.json",
       "category": "rank"
+    },
+    {
+      "id": "blue-fish",
+      "name": "蓝鱼小宠",
+      "version": "1.0.0",
+      "author": "model-hub",
+      "description": "屏幕上游走的一条蓝色小鱼，点一下晃一晃。形象为原创占位图。",
+      "category": "ui",
+      "path": "plugins/blue-fish/mod.json"
     }
   ]
 }
