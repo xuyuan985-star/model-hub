@@ -22,15 +22,6 @@
     return d > 0 ? '还剩 ' + d + ' 天' : '今天到期';
   }
 
-  function feedRow(x) {
-    var t = x.k === 'aa-new' ? '榜单新增：' + x.title + (x.ii != null ? '（智能 ' + fmtNum(x.ii) + '）' : '')
-      : x.k === 'price-new' ? '新上架：' + x.title : '调价：' + x.title;
-    var s = x.k === 'price-change'
-      ? x.sub + ' · 输入 ' + C.money(x.i0) + ' → ' + C.money(x.i) + '，输出 ' + C.money(x.o0) + ' → ' + C.money(x.o)
-      : x.k === 'price-new' ? x.sub + ' · ' + C.money(x.i) + ' / ' + C.money(x.o) : x.sub;
-    return '<div class="row"><span class="fk k-' + esc(x.k) + '"></span><div class="mid"><div class="nm"><span class="nt">' + esc(t) + '</span></div><div class="sub">' + esc(s || '') + ' · ' + C.ago(x.t) + '</div></div></div>';
-  }
-
   w.registerMoreViews = function (A) {
     var page = A.page, toast = A.toast, openSheet = A.openSheet, closeSheet = A.closeSheet;
     var confirmSheet = A.confirmSheet, render = A.render, go = A.go, pickDlg = A.pickDlg, openDlg = A.openDlg;
@@ -311,15 +302,7 @@
       };
     }
 
-    function openFeedSheet(feed) {
-      openSheet('<h2>全部变动（' + feed.length + '）</h2><div class="list" style="margin:0 -16px">' +
-        feed.map(feedRow).join('') + '</div><div class="btns"><button class="btn" id="cl">关闭</button></div>', function () {
-        $('#cl').onclick = closeSheet;
-      });
-    }
-
     function viewMore() {
-      var feed = C.feed || [];
       var html = '<div class="sec" style="padding-top:6px">偏好设置</div><div class="card">' +
         prefRows() + '</div>' +
         '<div class="sec">版本与数据源</div><div class="card" id="upcard"></div><div class="card" id="aacard"></div>';
@@ -328,14 +311,6 @@
         html = html.replace('<div class="sec">版本与数据源</div>',
           '<div class="fhead"><span>版本与数据源</span><button class="fmore" id="upNow">发现新版本 ' + esc(w.Update.latest.tag) + '，一键更新 ›</button></div>');
       }
-
-      // 变动记录默认只放 3 条紧凑预览，点「全部」进弹层看，也可直达 AI 快讯页
-      html += '<div class="fhead"><span>最近变动与快讯</span><span>' +
-        '<button class="fmore" id="goNews" style="margin-right:12px">AI 快讯 ›</button>' +
-        (feed.length ? '<button class="fmore" id="fmore">调价 ' + feed.length + ' ›</button>' : '') + '</span></div>';
-      html += feed.length
-        ? '<div class="list boxed">' + feed.slice(0, 3).map(feedRow).join('') + '</div>'
-        : '<div class="card"><p class="mut" style="margin:0">暂无变动。后续刷新若发现新模型或调价，会自动记在这里。</p></div>';
 
         html += '<div class="sec">插件工坊</div><div class="card" id="wsentry"></div>';
 
@@ -351,9 +326,7 @@
         b.onclick = function () { pickDlg(p.name, p.opts, p.get(), function (v) { p.set(v); render(); }); };
       });
       upCard(); aaCard();
-      if ($('#goNews')) $('#goNews').onclick = function () { go('news'); };
       if ($('#upNow')) $('#upNow').onclick = function () { if (updateDlgFn) updateDlgFn(); };
-      if ($('#fmore')) $('#fmore').onclick = function () { openFeedSheet(feed); };
       $('#au').onchange = function (e) { C.saveSettings({ alertUsd: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
       $('#ac').onchange = function (e) { C.saveSettings({ alertCny: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
       $('#rf').onclick = function () { toast('正在刷新…'); C.refreshAll(true).then(function (r) { toast(r.every(Boolean) ? '已刷新' : '部分数据未刷新成功'); render(); }); };
