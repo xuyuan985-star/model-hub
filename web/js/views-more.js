@@ -337,6 +337,8 @@
         ? '<div class="list boxed">' + feed.slice(0, 3).map(feedRow).join('') + '</div>'
         : '<div class="card"><p class="mut" style="margin:0">暂无变动。后续刷新若发现新模型或调价，会自动记在这里。</p></div>';
 
+        html += '<div class="sec">插件（主题）</div><div class="card" id="modcard"></div>';
+
       html += '<div class="sec">存储与备份</div><div class="card">' +
         '<div class="kv"><span>低余额提醒阈值（美元 / 人民币）</span><span><input id="au" type="number" class="inline-num sm" value="' + (C.settings.alertUsd != null ? C.settings.alertUsd : 2) + '"> / <input id="ac" type="number" class="inline-num sm" value="' + (C.settings.alertCny != null ? C.settings.alertCny : 10) + '"></span></div>' +
         '<div class="kv"><span>本地缓存占用</span><span>' + (w.Native.dataSize() / 1048576).toFixed(1) + ' MB</span></div>' +
@@ -371,6 +373,44 @@
       };
       $('#cc').onclick = function () { confirmSheet('清空所有缓存和密钥？', '清空', function () { w.Native.clearData(); toast('已清空，请重新打开应用'); }); };
       $('#thx').onclick = function () { go('thanks'); };
+      modCard();
+    }
+
+    // ---------- 插件卡片：列出、启用/停用、导入、删除 ----------
+    function modCard() {
+      var el = $('#modcard'); if (!el || !w.Mods) return;
+      var list = w.Mods.list(), on = w.Mods.enabledId;
+      var rows = list.length ? list.map(function (m) {
+        var active = m.id === on;
+        return '<div class="kv"><span>' + esc(m.name) + ' <span class="mut" style="font-size:12px">v' + esc(m.version) + (m.author ? ' · ' + esc(m.author) : '') + '</span></span>' +
+          '<span><button class="btn sm' + (active ? ' main' : '') + '" data-en="' + esc(m.id) + '">' + (active ? '使用中' : '启用') + '</button> ' +
+          '<button class="btn sm ghost" data-rm="' + esc(m.id) + '">删除</button></span></div>' +
+          (m.description ? '<p class="mut" style="margin:0 0 8px;font-size:12px">' + esc(m.description) + '</p>' : '');
+      }).join('') : '<p class="mut" style="margin:0 0 8px">还没有安装插件。插件是一份 JSON 清单，只能换颜色，不能联网或读取密钥。</p>';
+      el.innerHTML = rows +
+        '<div class="btns"><button class="btn sm" id="modImp">粘贴导入</button>' +
+        (on ? '<button class="btn sm ghost" id="modOff">恢复默认配色</button>' : '') + '</div>';
+      [].forEach.call(el.querySelectorAll('[data-en]'), function (b) {
+        b.onclick = function () { var id = b.getAttribute('data-en'); w.Mods.enable(id === on ? null : id); toast(id === on ? '已恢复默认配色' : '已启用'); render(); };
+      });
+      [].forEach.call(el.querySelectorAll('[data-rm]'), function (b) {
+        b.onclick = function () { var id = b.getAttribute('data-rm'); confirmSheet('删除这个插件？', '删除', function () { w.Mods.remove(id); toast('已删除'); render(); }); };
+      });
+      $('#modImp').onclick = modImportSheet;
+      if ($('#modOff')) $('#modOff').onclick = function () { w.Mods.enable(null); toast('已恢复默认配色'); render(); };
+    }
+
+    function modImportSheet() {
+      openSheet('<h2>导入插件</h2><p class="mut">粘贴插件的 mod.json 内容：</p>' +
+        '<textarea id="modTxt" rows="8" style="width:100%;box-sizing:border-box;font:12px monospace" placeholder="粘贴 mod.json 内容"></textarea>' +
+        '<div class="btns"><button class="btn main" id="modOk">导入并启用</button><button class="btn" id="cl">取消</button></div>', function () {
+        $('#modOk').onclick = function () {
+          var r = w.Mods.install($('#modTxt').value);
+          if (!r.ok) { toast('导入失败：' + r.error); return; }
+          w.Mods.enable(r.mod.id); closeSheet(); toast('已导入并启用「' + r.mod.name + '」'); render();
+        };
+        $('#cl').onclick = closeSheet;
+      });
     }
 
     function viewThanks() {
