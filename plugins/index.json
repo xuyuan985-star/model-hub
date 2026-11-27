@@ -29,13 +29,31 @@
       "category": "rank"
     },
     {
-      "id": "blue-fish",
-      "name": "蓝鱼小宠",
+      "id": "desktop-pet",
+      "name": "桌宠",
+      "version": "1.1.0",
+      "author": "model-hub",
+      "description": "屏幕上游走的鲸鱼娘桌宠，会待机、走路、被点击惊讶、被按住拖动，久不操作会睡着。",
+      "category": "ui",
+      "path": "plugins/desktop-pet/mod.json"
+    },
+    {
+      "id": "night-hall",
+      "name": "夜宫",
       "version": "1.0.0",
       "author": "model-hub",
-      "description": "屏幕上游走的一条蓝色小鱼，点一下晃一晃。形象为原创占位图。",
+      "description": "深夜宫殿舞厅背景，深色主题下使用，压暗遮罩，内容区保持可读。",
       "category": "ui",
-      "path": "plugins/blue-fish/mod.json"
+      "path": "plugins/night-hall/mod.json"
+    },
+    {
+      "id": "day-hall",
+      "name": "白昼宫",
+      "version": "1.0.0",
+      "author": "model-hub",
+      "description": "白天宫殿舞厅背景，浅色主题下使用，提亮遮罩，内容区保持可读。",
+      "category": "ui",
+      "path": "plugins/day-hall/mod.json"
     }
   ]
 }

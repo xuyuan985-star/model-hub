@@ -19,6 +19,7 @@
     if (!m) return false;
     if (m.type === 'effect') return w.Mods.effectId === m.id;
     if (m.type === 'pet') return w.Mods.petId === m.id;
+    if (m.type === 'background') return w.Mods.backgroundId === m.id;
     return w.Mods.enabledId === m.id;
   }
   /** 按类型开启（传 null 关闭）。主题与效果各自独立。 */
@@ -26,6 +27,7 @@
     if (!m) return;
     if (m.type === 'effect') w.Mods.enableEffect(on ? m.id : null);
     else if (m.type === 'pet') w.Mods.enablePet(on ? m.id : null);
+    else if (m.type === 'background') w.Mods.enableBackground(on ? m.id : null);
     else w.Mods.enable(on ? m.id : null);
   }
 
@@ -121,8 +123,8 @@
       if (!m) btns += '<button class="btn main" id="dDl">下载安装</button>';
       if (m && s.k === 'update') btns += '<button class="btn main" id="dDl">更新到 ' + esc(entry.version) + '</button>';
       var kind = m ? m.type : '';
-      var onLabel = kind === 'effect' ? '开启效果' : kind === 'pet' ? '开启宠物' : '启用';
-      var offLabel = kind === 'effect' ? '关闭效果' : kind === 'pet' ? '关闭宠物' : '恢复默认配色';
+      var onLabel = kind === 'effect' ? '开启效果' : kind === 'pet' ? '开启宠物' : kind === 'background' ? '使用此背景' : '启用';
+      var offLabel = kind === 'effect' ? '关闭效果' : kind === 'pet' ? '关闭宠物' : kind === 'background' ? '取消背景' : '恢复默认配色';
       if (m && !on) btns += '<button class="btn" id="dOn">' + onLabel + '</button>';
       if (m && on) btns += '<button class="btn" id="dOff">' + offLabel + '</button>';
       if (m) btns += '<button class="btn ghost" id="dRm">删除</button>';
@@ -168,8 +170,8 @@
         if (e.target.closest('#back')) { st.detail = null; render(); return; }
         if (e.target.closest('#dDl') && entry) { doInstall(entry, e.target.closest('#dDl')); return; }
         var mm = w.Mods.get(id);
-        var on1 = mm.type === 'effect' ? '已开启效果' : mm.type === 'pet' ? '已开启宠物' : '已启用';
-        var off1 = mm.type === 'effect' ? '已关闭效果' : mm.type === 'pet' ? '已关闭宠物' : '已恢复默认配色';
+        var on1 = mm.type === 'effect' ? '已开启效果' : mm.type === 'pet' ? '已开启宠物' : mm.type === 'background' ? '已应用背景' : '已启用';
+        var off1 = mm.type === 'effect' ? '已关闭效果' : mm.type === 'pet' ? '已关闭宠物' : mm.type === 'background' ? '已取消背景' : '已恢复默认配色';
         if (e.target.closest('#dOn')) { setActive(mm, true); toast(on1); render(); return; }
         if (e.target.closest('#dOff')) { setActive(mm, false); toast(off1); render(); return; }
         if (e.target.closest('#dRm')) { removeMod(id); return; }

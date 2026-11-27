@@ -1,0 +1,10 @@
+{
+  "id": "desktop-pet",
+  "name": "桌宠",
+  "version": "1.1.0",
+  "author": "model-hub",
+  "description": "屏幕上游走的鲸鱼娘桌宠，会待机、走路、被点击惊讶、被按住拖动，久不操作会睡着。",
+  "type": "pet",
+  "category": "ui",
+  "sprite": "whale-girl"
+}

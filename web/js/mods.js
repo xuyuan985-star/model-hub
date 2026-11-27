@@ -35,7 +35,9 @@
   };
 
   /** 内置宠物形象：清单只能引用名字，图由 web/assets/pets/<name>.svg 提供，不接受外部地址。 */
-  var PETS = { 'blue-fish': { label: '蓝鱼' } };
+  var PETS = { 'whale-girl': { label: '鲸鱼娘' } };
+  /** 内置背景：清单只能选名字，图由 web/assets/backgrounds/<name>.webp 提供。 */
+  var BACKGROUNDS = { 'bg-dark': { label: '深色夜宫' }, 'bg-light': { label: '浅色白昼' } };
 
   function str(v, max) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
 
@@ -50,6 +52,11 @@
     if (!SEMVER_RE.test(version)) return { ok: false, error: 'version 需为 x.y.z 格式' };
     var cat = CATEGORIES[raw.category] ? raw.category : 'ui';
     var base = { id: id, name: name, version: version, author: str(raw.author, 30), description: str(raw.description, 120), category: cat };
+    if (raw.type === 'background') {
+      if (!BACKGROUNDS[raw.background]) return { ok: false, error: '背景只能是 ' + Object.keys(BACKGROUNDS).join(' / ') };
+      base.type = 'background'; base.background = raw.background;
+      return { ok: true, mod: base };
+    }
     if (raw.type === 'pet') {
       if (!PETS[raw.sprite]) return { ok: false, error: '宠物形象只能是 ' + Object.keys(PETS).join(' / ') };
       base.type = 'pet'; base.sprite = raw.sprite;
@@ -61,7 +68,7 @@
       base.type = 'effect'; base.style = raw.style;
       return { ok: true, mod: base };
     }
-    if (raw.type !== 'theme') return { ok: false, error: '暂只支持 type 为 theme / effect / pet 的插件' };
+    if (raw.type !== 'theme') return { ok: false, error: '暂只支持 type 为 theme / effect / pet / background 的插件' };
     base.type = 'theme';
     base.light = pickVars(raw.light); base.dark = pickVars(raw.dark);
     if (!Object.keys(base.light).length && !Object.keys(base.dark).length) return { ok: false, error: '插件没有任何有效的颜色变量' };
@@ -79,14 +86,15 @@
   }
 
   // ---------- 已安装插件的存储 ----------
-  var state = C.store.get(STORE, { enabled: null, effect: null, pet: null, list: [] });
-  if (!state || !Array.isArray(state.list)) state = { enabled: null, effect: null, pet: null, list: [] };
+  var state = C.store.get(STORE, { enabled: null, effect: null, pet: null, background: null, list: [] });
+  if (!state || !Array.isArray(state.list)) state = { enabled: null, effect: null, pet: null, background: null, list: [] };
+  if (state.background === undefined) state.background = null;
   if (state.effect === undefined) state.effect = null;
   if (state.pet === undefined) state.pet = null;
   var mods = {};
   state.list.forEach(function (m) { var r = validate(m); if (r.ok) mods[r.mod.id] = r.mod; });
 
-  function save() { C.store.set(STORE, { enabled: state.enabled, effect: state.effect, pet: state.pet, list: Object.keys(mods).map(function (k) { return mods[k]; }) }); C.emit('mods'); }
+  function save() { C.store.set(STORE, { enabled: state.enabled, effect: state.effect, pet: state.pet, background: state.background, list: Object.keys(mods).map(function (k) { return mods[k]; }) }); C.emit('mods'); }
 
   /** 把当前启用的主题覆盖写入页面（<style id="modStyle">，在 app.css 之后生效） */
   function apply() {
@@ -127,6 +135,16 @@
     get enabledId() { return state.enabled; },
     get effectId() { return state.effect; },
     get petId() { return state.pet; },
+    get backgroundId() { return state.background; },
+    BACKGROUNDS: BACKGROUNDS,
+    /** 启用/停用背景（与主题、效果、宠物独立）。传 null 关闭。 */
+    enableBackground: function (id) {
+      if (id && (!mods[id] || mods[id].type !== 'background')) return false;
+      state.background = id || null;
+      save(); apply();
+      C.emit('background');
+      return true;
+    },
     PETS: PETS,
     /** 启用/停用宠物（与主题、效果独立）。传 null 关闭。 */
     enablePet: function (id) {
@@ -159,6 +177,7 @@
       if (state.enabled === id) state.enabled = null;
       if (state.effect === id) state.effect = null;
       if (state.pet === id) state.pet = null;
+      if (state.background === id) state.background = null;
       save(); apply();
       return true;
     },
