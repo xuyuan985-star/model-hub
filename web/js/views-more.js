@@ -337,7 +337,7 @@
         ? '<div class="list boxed">' + feed.slice(0, 3).map(feedRow).join('') + '</div>'
         : '<div class="card"><p class="mut" style="margin:0">暂无变动。后续刷新若发现新模型或调价，会自动记在这里。</p></div>';
 
-        html += '<div class="sec">插件（主题）</div><div class="card" id="modcard"></div>';
+        html += '<div class="sec">插件工坊</div><div class="card" id="modcard"></div>';
 
       html += '<div class="sec">存储与备份</div><div class="card">' +
         '<div class="kv"><span>低余额提醒阈值（美元 / 人民币）</span><span><input id="au" type="number" class="inline-num sm" value="' + (C.settings.alertUsd != null ? C.settings.alertUsd : 2) + '"> / <input id="ac" type="number" class="inline-num sm" value="' + (C.settings.alertCny != null ? C.settings.alertCny : 10) + '"></span></div>' +
@@ -374,6 +374,8 @@
       $('#cc').onclick = function () { confirmSheet('清空所有缓存和密钥？', '清空', function () { w.Native.clearData(); toast('已清空，请重新打开应用'); }); };
       $('#thx').onclick = function () { go('thanks'); };
       modCard();
+      // 首次进入「更多」才自动拉一次列表；失败不自动重试（避免 render 循环），用户可点「刷新列表」
+      if (w.Workshop && !w.Workshop.loading && !w.Workshop.tried) { w.Workshop.tried = true; w.Workshop.refresh().then(function () { render(); }, function () { render(); }); }
     }
 
     // ---------- 插件卡片：列出、启用/停用、导入、删除 ----------
@@ -387,9 +389,26 @@
           '<button class="btn sm ghost" data-rm="' + esc(m.id) + '">删除</button></span></div>' +
           (m.description ? '<p class="mut" style="margin:0 0 8px;font-size:12px">' + esc(m.description) + '</p>' : '');
       }).join('') : '<p class="mut" style="margin:0 0 8px">还没有安装插件。插件是一份 JSON 清单，只能换颜色，不能联网或读取密钥。</p>';
-      el.innerHTML = rows +
+      el.innerHTML = '<div class="sec">收录插件</div>' + workshopHtml() +
+        '<div class="btns"><button class="btn sm" id="wsRef">刷新列表</button></div>' +
+        '<div class="sec">已安装</div>' + rows +
         '<div class="btns"><button class="btn sm" id="modImp">粘贴导入</button>' +
         (on ? '<button class="btn sm ghost" id="modOff">恢复默认配色</button>' : '') + '</div>';
+      [].forEach.call(el.querySelectorAll('[data-dl]'), function (b) {
+        b.onclick = function () {
+          var entry = (w.Workshop.cached() || []).filter(function (x) { return x.id === b.getAttribute('data-dl'); })[0];
+          if (!entry) return;
+          b.textContent = '下载中…'; b.disabled = true;
+          w.Workshop.install(entry).then(function (r) {
+            if (!r.ok) { toast(r.error); render(); return; }
+            w.Mods.enable(r.mod.id); toast('已安装并启用「' + r.mod.name + '」'); render();
+          });
+        };
+      });
+      if ($('#wsRef')) $('#wsRef').onclick = function () {
+        toast('正在刷新…');
+        w.Workshop.refresh().then(function () { toast('列表已更新'); render(); }, function (e) { toast('刷新失败：' + (e.message || e)); render(); });
+      };
       [].forEach.call(el.querySelectorAll('[data-en]'), function (b) {
         b.onclick = function () { var id = b.getAttribute('data-en'); w.Mods.enable(id === on ? null : id); toast(id === on ? '已恢复默认配色' : '已启用'); render(); };
       });
@@ -398,6 +417,19 @@
       });
       $('#modImp').onclick = modImportSheet;
       if ($('#modOff')) $('#modOff').onclick = function () { w.Mods.enable(null); toast('已恢复默认配色'); render(); };
+    }
+
+    function workshopHtml() {
+      var list = w.Workshop ? w.Workshop.cached() : [];
+      var inst = {}; w.Mods.list().forEach(function (m) { inst[m.id] = m; });
+      if (!list.length) return '<p class="mut" style="margin:0 0 8px">' + (w.Workshop && w.Workshop.error ? '收录列表加载失败：' + esc(w.Workshop.error) : '还没有收录的插件。') + '</p>';
+      return list.map(function (p) {
+        var have = inst[p.id];
+        var btn = have ? (have.version === p.version ? '<span class="mut" style="font-size:12px">已安装</span>' : '<button class="btn sm" data-dl="' + esc(p.id) + '">更新</button>')
+          : '<button class="btn sm main" data-dl="' + esc(p.id) + '">下载</button>';
+        return '<div class="kv"><span>' + esc(p.name) + ' <span class="mut" style="font-size:12px">v' + esc(p.version) + (p.author ? ' · ' + esc(p.author) : '') + '</span></span>' + btn + '</div>' +
+          (p.description ? '<p class="mut" style="margin:0 0 10px;font-size:12px">' + esc(p.description) + '</p>' : '');
+      }).join('');
     }
 
     function modImportSheet() {

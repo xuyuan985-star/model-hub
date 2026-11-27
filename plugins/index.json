@@ -1,0 +1,13 @@
+{
+  "updatedAt": "2026-11-27",
+  "plugins": [
+    {
+      "id": "ocean-blue",
+      "name": "海蓝纸",
+      "version": "1.0.0",
+      "author": "model-hub",
+      "description": "把朱印红换成海蓝色，浅色与深色模式都有适配。",
+      "path": "plugins/ocean-blue/mod.json"
+    }
+  ]
+}
