@@ -32,6 +32,8 @@ echo "[1/6] 编译资源"
 echo "[2/6] 复制网页文件"
 mkdir -p "$B/assets/web"
 cp -r web/index.html web/css web/js web/seed web/assets "$B/assets/web/"
+# 像素冒险（web/game/）是独立整屏页面，单独整目录拷进 assets
+if [ -d web/game ]; then cp -r web/game "$B/assets/web/game"; fi
 
 echo "[3/6] 打包清单和资源"
 "$BT/aapt2.exe" link -o "$B/base.apk" -I "$AJAR" --manifest android/AndroidManifest.xml \

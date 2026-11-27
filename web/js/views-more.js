@@ -314,6 +314,11 @@
 
         html += '<div class="sec">插件工坊</div><div class="card" id="wsentry"></div>';
 
+      // 像素冒险：独立整屏的离线小游戏（web/game/），进去时原生侧会切沉浸模式
+      html += '<div class="sec">像素冒险</div><div class="card">' +
+        '<div class="kv"><span>残响协议 · 第一章</span><span class="mut" style="font-size:12px">离线小游戏</span></div>' +
+        '<div class="btns"><button class="btn sm" id="pg">进入观测站</button></div></div>';
+
       html += '<div class="sec">存储与备份</div><div class="card">' +
         '<div class="kv"><span>低余额提醒阈值（美元 / 人民币）</span><span><input id="au" type="number" class="inline-num sm" value="' + (C.settings.alertUsd != null ? C.settings.alertUsd : 2) + '"> / <input id="ac" type="number" class="inline-num sm" value="' + (C.settings.alertCny != null ? C.settings.alertCny : 10) + '"></span></div>' +
         '<div class="kv"><span>本地缓存占用</span><span>' + (w.Native.dataSize() / 1048576).toFixed(1) + ' MB</span></div>' +
@@ -346,6 +351,7 @@
       };
       $('#cc').onclick = function () { confirmSheet('清空所有缓存和密钥？', '清空', function () { w.Native.clearData(); toast('已清空，请重新打开应用'); }); };
       $('#thx').onclick = function () { go('thanks'); };
+      $('#pg').onclick = function () { location.href = 'game/index.html'; };
       wsEntry();
     }
 

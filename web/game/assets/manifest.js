@@ -1,0 +1,1236 @@
+/* 由 tools/art-check.mjs --write-manifest 生成，勿手改：数据同 manifest.json。 */
+(function (w) {
+  'use strict';
+  w.GameAssets = {
+   "v": 1,
+   "source": "tools/art-check.mjs --write-manifest",
+   "note": "引擎按 key 取图；cell/cols/rows 为图集切分，anchor 相对单帧（精灵为脚底中心，道具为左下）。w/h 为整图尺寸。",
+   "totalBytes": 847145,
+   "items": {
+    "bg_alley": {
+     "key": "bg_alley",
+     "file": "assets/pixel/bg_alley.png",
+     "w": 384,
+     "h": 224,
+     "anchor": [
+      0,
+      224
+     ],
+     "frames": 1,
+     "bytes": 11322,
+     "kind": "bg",
+     "cell": [
+      384,
+      224
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "bg_archive": {
+     "key": "bg_archive",
+     "file": "assets/pixel/bg_archive.png",
+     "w": 384,
+     "h": 224,
+     "anchor": [
+      0,
+      224
+     ],
+     "frames": 1,
+     "bytes": 9859,
+     "kind": "bg",
+     "cell": [
+      384,
+      224
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "bg_colonnade": {
+     "key": "bg_colonnade",
+     "file": "assets/pixel/bg_colonnade.png",
+     "w": 384,
+     "h": 224,
+     "anchor": [
+      0,
+      224
+     ],
+     "frames": 1,
+     "bytes": 7942,
+     "kind": "bg",
+     "cell": [
+      384,
+      224
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "bg_greenhouse": {
+     "key": "bg_greenhouse",
+     "file": "assets/pixel/bg_greenhouse.png",
+     "w": 384,
+     "h": 224,
+     "anchor": [
+      0,
+      224
+     ],
+     "frames": 1,
+     "bytes": 9432,
+     "kind": "bg",
+     "cell": [
+      384,
+      224
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "bg_station": {
+     "key": "bg_station",
+     "file": "assets/pixel/bg_station.png",
+     "w": 384,
+     "h": 224,
+     "anchor": [
+      0,
+      224
+     ],
+     "frames": 1,
+     "bytes": 7942,
+     "kind": "bg",
+     "cell": [
+      384,
+      224
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "boss_devourer": {
+     "key": "boss_devourer",
+     "file": "assets/pixel/boss_devourer.png",
+     "w": 128,
+     "h": 96,
+     "anchor": [
+      16,
+      32
+     ],
+     "frames": 12,
+     "bytes": 1397,
+     "kind": "boss",
+     "cell": [
+      32,
+      32
+     ],
+     "cols": 4,
+     "rows": 3
+    },
+    "cache_moth": {
+     "key": "cache_moth",
+     "file": "assets/pixel/cache_moth.png",
+     "w": 32,
+     "h": 32,
+     "anchor": [
+      16,
+      32
+     ],
+     "frames": 1,
+     "bytes": 273,
+     "kind": "enemy",
+     "cell": [
+      32,
+      32
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "face_jin": {
+     "key": "face_jin",
+     "file": "assets/pixel/face_jin.png",
+     "w": 48,
+     "h": 60,
+     "anchor": [
+      0,
+      60
+     ],
+     "frames": 1,
+     "bytes": 891,
+     "kind": "face",
+     "cell": [
+      48,
+      60
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "face_juan": {
+     "key": "face_juan",
+     "file": "assets/pixel/face_juan.png",
+     "w": 48,
+     "h": 60,
+     "anchor": [
+      0,
+      60
+     ],
+     "frames": 1,
+     "bytes": 870,
+     "kind": "face",
+     "cell": [
+      48,
+      60
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "face_kai": {
+     "key": "face_kai",
+     "file": "assets/pixel/face_kai.png",
+     "w": 48,
+     "h": 60,
+     "anchor": [
+      0,
+      60
+     ],
+     "frames": 1,
+     "bytes": 976,
+     "kind": "face",
+     "cell": [
+      48,
+      60
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "face_mu": {
+     "key": "face_mu",
+     "file": "assets/pixel/face_mu.png",
+     "w": 48,
+     "h": 60,
+     "anchor": [
+      0,
+      60
+     ],
+     "frames": 1,
+     "bytes": 838,
+     "kind": "face",
+     "cell": [
+      48,
+      60
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "face_observer": {
+     "key": "face_observer",
+     "file": "assets/pixel/face_observer.png",
+     "w": 48,
+     "h": 60,
+     "anchor": [
+      0,
+      60
+     ],
+     "frames": 1,
+     "bytes": 843,
+     "kind": "face",
+     "cell": [
+      48,
+      60
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "face_xi": {
+     "key": "face_xi",
+     "file": "assets/pixel/face_xi.png",
+     "w": 48,
+     "h": 60,
+     "anchor": [
+      0,
+      60
+     ],
+     "frames": 1,
+     "bytes": 910,
+     "kind": "face",
+     "cell": [
+      48,
+      60
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "faded_photo": {
+     "key": "faded_photo",
+     "file": "assets/pixel/faded_photo.png",
+     "w": 32,
+     "h": 32,
+     "anchor": [
+      16,
+      32
+     ],
+     "frames": 1,
+     "bytes": 291,
+     "kind": "enemy",
+     "cell": [
+      32,
+      32
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "fx_page_burst": {
+     "key": "fx_page_burst",
+     "file": "assets/pixel/fx_page_burst.png",
+     "w": 256,
+     "h": 64,
+     "anchor": [
+      32,
+      64
+     ],
+     "frames": 4,
+     "bytes": 475,
+     "kind": "fx",
+     "cell": [
+      64,
+      64
+     ],
+     "cols": 4,
+     "rows": 1
+    },
+    "fx_silence": {
+     "key": "fx_silence",
+     "file": "assets/pixel/fx_silence.png",
+     "w": 256,
+     "h": 64,
+     "anchor": [
+      32,
+      64
+     ],
+     "frames": 4,
+     "bytes": 571,
+     "kind": "fx",
+     "cell": [
+      64,
+      64
+     ],
+     "cols": 4,
+     "rows": 1
+    },
+    "fx_slash": {
+     "key": "fx_slash",
+     "file": "assets/pixel/fx_slash.png",
+     "w": 256,
+     "h": 64,
+     "anchor": [
+      32,
+      64
+     ],
+     "frames": 4,
+     "bytes": 404,
+     "kind": "fx",
+     "cell": [
+      64,
+      64
+     ],
+     "cols": 4,
+     "rows": 1
+    },
+    "npc_jian": {
+     "key": "npc_jian",
+     "file": "assets/pixel/npc_jian.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 470,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 2
+    },
+    "npc_jin": {
+     "key": "npc_jin",
+     "file": "assets/pixel/npc_jin.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 499,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 4
+    },
+    "npc_juan": {
+     "key": "npc_juan",
+     "file": "assets/pixel/npc_juan.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 454,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 4
+    },
+    "npc_kai": {
+     "key": "npc_kai",
+     "file": "assets/pixel/npc_kai.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 524,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 4
+    },
+    "npc_mu": {
+     "key": "npc_mu",
+     "file": "assets/pixel/npc_mu.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 483,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 4
+    },
+    "npc_pan": {
+     "key": "npc_pan",
+     "file": "assets/pixel/npc_pan.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 463,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 2
+    },
+    "npc_xi": {
+     "key": "npc_xi",
+     "file": "assets/pixel/npc_xi.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 475,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 4
+    },
+    "page_mite": {
+     "key": "page_mite",
+     "file": "assets/pixel/page_mite.png",
+     "w": 32,
+     "h": 32,
+     "anchor": [
+      16,
+      32
+     ],
+     "frames": 1,
+     "bytes": 279,
+     "kind": "enemy",
+     "cell": [
+      32,
+      32
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pc_observer": {
+     "key": "pc_observer",
+     "file": "assets/pixel/pc_observer.png",
+     "w": 64,
+     "h": 96,
+     "anchor": [
+      8,
+      24
+     ],
+     "frames": 16,
+     "bytes": 499,
+     "kind": "sprite",
+     "cell": [
+      16,
+      24
+     ],
+     "cols": 4,
+     "rows": 4,
+     "dirs": 4
+    },
+    "pt_devourer_p1": {
+     "key": "pt_devourer_p1",
+     "file": "assets/portrait/pt_devourer_p1.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 23437,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_devourer_p2": {
+     "key": "pt_devourer_p2",
+     "file": "assets/portrait/pt_devourer_p2.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 20644,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_devourer_p3": {
+     "key": "pt_devourer_p3",
+     "file": "assets/portrait/pt_devourer_p3.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 8062,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_jian": {
+     "key": "pt_jian",
+     "file": "assets/portrait/pt_jian.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21071,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_jian_bust": {
+     "key": "pt_jian_bust",
+     "file": "assets/portrait/pt_jian_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 23032,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_jian_cover": {
+     "key": "pt_jian_cover",
+     "file": "assets/portrait/pt_jian_cover.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21071,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_jin": {
+     "key": "pt_jin",
+     "file": "assets/portrait/pt_jin.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21114,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_jin_bust": {
+     "key": "pt_jin_bust",
+     "file": "assets/portrait/pt_jin_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 22573,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_jin_fold": {
+     "key": "pt_jin_fold",
+     "file": "assets/portrait/pt_jin_fold.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21114,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_jin_half": {
+     "key": "pt_jin_half",
+     "file": "assets/portrait/pt_jin_half.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 49670,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_juan": {
+     "key": "pt_juan",
+     "file": "assets/portrait/pt_juan.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21018,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_juan_bust": {
+     "key": "pt_juan_bust",
+     "file": "assets/portrait/pt_juan_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 24297,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_juan_half": {
+     "key": "pt_juan_half",
+     "file": "assets/portrait/pt_juan_half.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 40696,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_juan_unroll": {
+     "key": "pt_juan_unroll",
+     "file": "assets/portrait/pt_juan_unroll.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21273,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_kai": {
+     "key": "pt_kai",
+     "file": "assets/portrait/pt_kai.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 19660,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_kai_bust": {
+     "key": "pt_kai_bust",
+     "file": "assets/portrait/pt_kai_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 23092,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_kai_half": {
+     "key": "pt_kai_half",
+     "file": "assets/portrait/pt_kai_half.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 35447,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_kai_thin": {
+     "key": "pt_kai_thin",
+     "file": "assets/portrait/pt_kai_thin.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 19660,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_mu": {
+     "key": "pt_mu",
+     "file": "assets/portrait/pt_mu.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 17780,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_mu_bust": {
+     "key": "pt_mu_bust",
+     "file": "assets/portrait/pt_mu_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 18644,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_mu_frame": {
+     "key": "pt_mu_frame",
+     "file": "assets/portrait/pt_mu_frame.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 17822,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_mu_half": {
+     "key": "pt_mu_half",
+     "file": "assets/portrait/pt_mu_half.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 28080,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_observer": {
+     "key": "pt_observer",
+     "file": "assets/portrait/pt_observer.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 19410,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_observer_bust": {
+     "key": "pt_observer_bust",
+     "file": "assets/portrait/pt_observer_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21515,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_observer_half": {
+     "key": "pt_observer_half",
+     "file": "assets/portrait/pt_observer_half.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 33430,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_observer_profile": {
+     "key": "pt_observer_profile",
+     "file": "assets/portrait/pt_observer_profile.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 19410,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_pan": {
+     "key": "pt_pan",
+     "file": "assets/portrait/pt_pan.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 17968,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_pan_bust": {
+     "key": "pt_pan_bust",
+     "file": "assets/portrait/pt_pan_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 19520,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_pan_stop": {
+     "key": "pt_pan_stop",
+     "file": "assets/portrait/pt_pan_stop.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 17968,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_xi": {
+     "key": "pt_xi",
+     "file": "assets/portrait/pt_xi.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21403,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_xi_bust": {
+     "key": "pt_xi_bust",
+     "file": "assets/portrait/pt_xi_bust.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 26048,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_xi_frown": {
+     "key": "pt_xi_frown",
+     "file": "assets/portrait/pt_xi_frown.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 21403,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "pt_xi_half": {
+     "key": "pt_xi_half",
+     "file": "assets/portrait/pt_xi_half.png",
+     "w": 1024,
+     "h": 1536,
+     "anchor": [
+      512,
+      1536
+     ],
+     "frames": 1,
+     "bytes": 47704,
+     "kind": "portrait",
+     "cell": [
+      1024,
+      1536
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "rank_auditor": {
+     "key": "rank_auditor",
+     "file": "assets/pixel/rank_auditor.png",
+     "w": 32,
+     "h": 32,
+     "anchor": [
+      16,
+      32
+     ],
+     "frames": 1,
+     "bytes": 250,
+     "kind": "enemy",
+     "cell": [
+      32,
+      32
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "tiles_world": {
+     "key": "tiles_world",
+     "file": "assets/pixel/tiles_world.png",
+     "w": 96,
+     "h": 64,
+     "anchor": [
+      0,
+      16
+     ],
+     "frames": 24,
+     "bytes": 825,
+     "kind": "tiles",
+     "cell": [
+      16,
+      16
+     ],
+     "cols": 6,
+     "rows": 4
+    },
+    "ui_portrait_frame": {
+     "key": "ui_portrait_frame",
+     "file": "assets/pixel/ui_portrait_frame.png",
+     "w": 64,
+     "h": 64,
+     "anchor": [
+      0,
+      64
+     ],
+     "frames": 1,
+     "bytes": 336,
+     "kind": "ui",
+     "cell": [
+      64,
+      64
+     ],
+     "cols": 1,
+     "rows": 1
+    },
+    "ui_slot_frame": {
+     "key": "ui_slot_frame",
+     "file": "assets/pixel/ui_slot_frame.png",
+     "w": 144,
+     "h": 48,
+     "anchor": [
+      0,
+      48
+     ],
+     "frames": 3,
+     "bytes": 481,
+     "kind": "ui",
+     "cell": [
+      48,
+      48
+     ],
+     "cols": 3,
+     "rows": 1
+    },
+    "ui_slot_icons": {
+     "key": "ui_slot_icons",
+     "file": "assets/pixel/ui_slot_icons.png",
+     "w": 192,
+     "h": 48,
+     "anchor": [
+      0,
+      16
+     ],
+     "frames": 36,
+     "bytes": 835,
+     "kind": "ui",
+     "cell": [
+      16,
+      16
+     ],
+     "cols": 12,
+     "rows": 3
+    }
+   }
+  };
+})(window);

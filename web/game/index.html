@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>残响协议 · 第一章</title>
+<style>
+  :root {
+    --key-bg: rgba(24,28,37,0.72); --key-line: rgba(244,245,247,0.20); --key-on: rgba(43,91,138,0.92);
+    --side: 0px;          /* 横屏时留给左右触控区的最小宽度，由媒体查询调整 */
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0E1014; -webkit-user-select: none; user-select: none; }
+  body { display: flex; flex-direction: column; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  #stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 0; min-width: 0; }
+  #hint { display: none; margin: 0; padding: 0 12px; font: 12px/1.6 system-ui, sans-serif; color: #6B7482; text-align: center; }
+  #game { display: block; image-rendering: pixelated; touch-action: none; background: #0E1014; }
+
+  /* 触控区：竖屏在画布下方；横屏变成左右两列浮在画面两侧，画布垂直铺满 */
+  #pad { flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+         padding: 8px 14px calc(10px + var(--safe-b)); }
+  #pad button {
+    -webkit-tap-highlight-color: transparent; touch-action: none;
+    font: 600 15px/1 system-ui, sans-serif; color: #E6E9EF;
+    background: var(--key-bg); border: 1px solid var(--key-line); border-radius: 12px;
+    padding: 0; margin: 0; backdrop-filter: blur(4px);
+  }
+  #pad button:active, #pad button.on { background: var(--key-on); border-color: rgba(244,245,247,0.45); }
+  #pad .dpad { display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); gap: 5px; }
+  #pad .dpad .up { grid-area: 1 / 2; }
+  #pad .dpad .left { grid-area: 2 / 1; }
+  #pad .dpad .down { grid-area: 3 / 2; }
+  #pad .dpad .right { grid-area: 2 / 3; }
+  #pad .dpad .core { grid-area: 2 / 2; border-radius: 50%; background: rgba(24,28,37,0.34); border-color: rgba(244,245,247,0.08); }
+  #pad .acts { display: grid; grid-template-columns: 56px 56px; grid-template-rows: 40px 66px; gap: 8px; align-items: stretch; justify-items: stretch; }
+  #pad .acts .menu { grid-area: 1 / 1; font-size: 14px; }
+  #pad .acts .auto { grid-area: 1 / 2; font-size: 14px; }
+  #pad .acts .act { grid-area: 2 / 1 / 3 / 3; width: 66px; height: 66px; border-radius: 50%; font-size: 16px; justify-self: end; align-self: end; }
+  #pad .acts .auto[data-on="1"] { background: var(--key-on); border-color: rgba(168,203,214,0.55); }
+
+  @media (orientation: portrait) {
+    /* 竖屏：画布在上、按键在下，并且明确告诉玩家横过来更合适 */
+    #hint { display: block; }
+    #pad { padding-bottom: calc(12px + var(--safe-b)); }
+  }
+
+  @media (orientation: landscape) {
+    :root { --side: 118px; }
+    body { flex-direction: row; }
+    /* 左右触控区不进布局，画布垂直铺满；仅在计算可用宽度时扣掉 --side，所以永不会压住画面 */
+    #pad { position: fixed; inset: 0; align-items: flex-end; padding: 0 max(8px, var(--safe-r)) calc(8px + var(--safe-b)) max(8px, var(--safe-l)); pointer-events: none; }
+    #pad .dpad, #pad .acts { pointer-events: auto; opacity: 0.9; }
+    #pad .dpad { grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 48px); }
+    #pad .acts { grid-template-columns: 50px 50px; grid-template-rows: 36px 58px; }
+    #pad .acts .act { width: 58px; height: 58px; font-size: 15px; }
+    #hint { display: none; }
+  }
+  /* 桌面浏览器：有鼠标键盘就不显示虚拟键，也不留侧边 */
+  @media (hover: hover) and (pointer: fine) {
+    :root { --side: 0px; }
+    #pad { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="384" height="224"></canvas>
+  <p id="hint">竖屏也能玩，横过来画面更大</p>
+</div>
+<div id="pad">
+  <div class="dpad">
+    <button class="up" data-dir="up">▲</button>
+    <button class="left" data-dir="left">◀</button>
+    <span class="core"></span>
+    <button class="down" data-dir="down">▼</button>
+    <button class="right" data-dir="right">▶</button>
+  </div>
+  <div class="acts">
+    <button class="menu" data-cmd="menu">菜单</button>
+    <button class="auto" data-cmd="auto">自动</button>
+    <button class="act" data-cmd="act">确定</button>
+  </div>
+</div>
+<script src="assets/manifest.js"></script>
+<script src="data/roster-source.js"></script>
+<script src="data/world.js"></script>
+<script src="data/characters.js"></script>
+<script src="data/dialog.js"></script>
+<script src="data/quests.js"></script>
+<script src="data/progress.js"></script>
+<script src="interlude/ch1_a1.js"></script>
+<script src="interlude/ch1_a2.js"></script>
+<script src="interlude/ch1_a3.js"></script>
+<script src="interlude/ch1_a4.js"></script>
+<script src="interlude/index.js"></script>
+<script src="battle/core.js"></script>
+<script src="battle/skills.js"></script>
+<script src="battle/enemies.js"></script>
+<script src="battle/battle.js"></script>
+<script src="battle/gacha.js"></script>
+<script src="battle/checkin.js"></script>
+<script src="engine/util.js"></script>
+<script src="engine/storage.js"></script>
+<script src="engine/assets.js"></script>
+<script src="engine/map.js"></script>
+<script src="engine/input.js"></script>
+<script src="engine/state.js"></script>
+<script src="engine/script.js"></script>
+<script src="engine/camera.js"></script>
+<script src="engine/render.js"></script>
+<script src="engine/game.js"></script>
+<script src="engine/main.js"></script>
+</body>
+</html>

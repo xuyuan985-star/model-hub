@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -37,6 +38,7 @@ public class MainActivity extends Activity {
     private Http http;
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private long lastBack = 0;
+    private boolean immersive = false;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -82,6 +84,12 @@ public class MainActivity extends Activity {
                 openExternal(u.toString());
                 return true;
             }
+
+            @Override
+            public void onPageFinished(WebView v, String url) {
+                super.onPageFinished(v, url);
+                updateImmersiveFor(url);
+            }
         });
         web.loadUrl("file:///android_asset/web/index.html");
     }
@@ -100,8 +108,39 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 26) {
             f = dark ? (f & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR) : (f | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         }
+        if (immersive) {
+            // 游戏界面沉浸：状态栏与导航栏收起，手指从边缘划入可临时唤出，3 秒后自动收回
+            f |= View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+            if (Build.VERSION.SDK_INT >= 28) {
+                w.getAttributes().layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            }
+        } else {
+            f &= ~(View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        }
         w.getDecorView().setSystemUiVisibility(f);
         if (web != null) web.setBackgroundColor(bg);
+    }
+
+    /** 进入 / 退出沉浸模式：游戏页用沉浸，工具页保留状态栏。 */
+    private void setImmersive(boolean on) {
+        immersive = on;
+        applySystemBars(isNight());
+    }
+
+    /** 像素冒险是独立整屏页面（web/game/），进它才需要吃掉系统栏腾出纵向空间。 */
+    private void updateImmersiveFor(String url) {
+        boolean game = url != null && url.indexOf("/web/game/") >= 0;
+        if (game != immersive) setImmersive(game);
     }
 
     private void openExternal(String url) {
@@ -143,13 +182,22 @@ public class MainActivity extends Activity {
     @Override
     public void onConfigurationChanged(Configuration c) {
         super.onConfigurationChanged(c);
+        applySystemBars(isNight());
         js("window.__onSystemTheme&&window.__onSystemTheme(" + isNight() + ")");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        // 沉浸模式会被系统栏的临时唤出打断，回到前台时重新收起
+        if (immersive) applySystemBars(isNight());
         js("window.__onResume&&window.__onResume()");
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean has) {
+        super.onWindowFocusChanged(has);
+        if (has && immersive) applySystemBars(isNight());
     }
 
     @Override
