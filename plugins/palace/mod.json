@@ -1,0 +1,11 @@
+{
+  "id": "palace",
+  "name": "宫殿",
+  "version": "1.0.1",
+  "author": "model-hub",
+  "description": "夜晚或白昼的宫殿舞厅背景，跟随深浅主题自动切换，列表与卡片改为透明底，只露出背景图。",
+  "type": "background",
+  "category": "ui",
+  "background": "palace",
+  "minApp": "1.1.3"
+}

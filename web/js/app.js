@@ -3,7 +3,7 @@
   'use strict';
   var C = w.Core, N = w.Norm, X = w.Extra, esc = C.esc;
   var $ = function (s, r) { return (r || document).querySelector(s); };
-  var page = $('#page'), TABS = { rank: '榜单', price: '价格', news: 'AI 快讯', usage: '额度', more: '更多', thanks: '赞赏' };
+  var page = $('#page'), TABS = { rank: '榜单', price: '价格', news: 'AI 快讯', usage: '额度', more: '更多', thanks: '赞赏', workshop: '插件工坊' };
   var st = { tab: 'rank', rankMode: 'llm', priceMode: 'prov', metric: 'ii', q: '', favOnly: false, scope: 'all', creator: '', provider: null, sort: 'in', pq: '', vq: '', showFree: false, rankLimit: 60 };
   var sheetOpen = false;
 
@@ -11,6 +11,8 @@
   function applyTheme() {
     var t = C.settings.theme, dark = t === 'dark' || (t === 'auto' && C.info.night);
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    // 主题属性写好之后再通知：依赖深浅的模块（宫殿背景）要在这之后读取
+    C.emit('theme');
     try { w.Native.setTheme(dark); } catch (e) {}
   }
   w.__onSystemTheme = function (night) { C.info.night = night; applyTheme(); if (st.tab === 'price' && st.priceMode === 'value') render(); };
@@ -26,6 +28,11 @@
   function fmtCtx(n) { return !n ? '—' : n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : Math.round(n / 1000) + 'K'; }
   function debounce(f, ms) { var t; return function (a) { var self = this; clearTimeout(t); t = setTimeout(function () { f.call(self, a); }, ms); }; }
 
+  /** 厂商国旗小图（厂商名后面）；未收录国家的厂商不显示 */
+  function flagImg(creator) {
+    var src = w.CreatorFlag ? w.CreatorFlag.src(creator) : '';
+    return src ? '<img class="flag" src="' + src + '" alt="" loading="lazy">' : '';
+  }
   function logo(name, cls) {
     var f = w.LOGOS && w.LOGOS[name];
     if (!f) return '<i class="lg ph' + (cls ? ' ' + cls : '') + '">' + esc((name || '?').slice(0, 1)) + '</i>';
@@ -85,7 +92,7 @@
   w.__onBack = function () {
     if (dlgOpen) { closeDlg(); return true; }
     if (sheetOpen) { closeSheet(); return true; }
-    if (st.tab === 'thanks') { go('more'); return true; }
+    if (st.tab === 'thanks' || st.tab === 'workshop') { go('more'); return true; }
     // 榜单页的各个子榜（中文评测/生图/视频）先退回「大语言」，再按一次才离开榜单页
     if (st.tab === 'rank' && st.rankMode !== 'llm') { st.rankMode = 'llm'; render(); return true; }
     // 价格页的子页同理退回「按平台」
@@ -226,7 +233,7 @@
   function go(tab) {
     if (st.tab !== tab) st.rankLimit = 60;
     st.tab = tab; $('#title').textContent = TABS[tab];
-    var hi = tab === 'thanks' ? 'more' : tab;
+    var hi = (tab === 'thanks' || tab === 'workshop') ? 'more' : tab;
     [].forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === hi); });
     render(); page.scrollTop = 0;
     if (topEl) topEl.classList.remove('scrolled');
@@ -242,7 +249,7 @@
 
   function updateSrc() {
     var rkId = st.rankMode === 'prov' ? 'aa_providers' : st.rankMode === 't2i' ? 'aa_t2i' : st.rankMode === 't2v' ? 'aa_t2v' : st.rankMode === 'cn' ? 'cn_bench' : 'aa';
-    var ids = { rank: [rkId], price: (st.priceMode === 'value' || st.priceMode === 'calc') ? ['aa', 'prices'] : ['prices', 'fx'], usage: [], more: ['aa', 'prices', 'fx'], thanks: [], news: ['news'] }[st.tab];
+    var ids = { rank: [rkId], price: (st.priceMode === 'value' || st.priceMode === 'calc') ? ['aa', 'prices'] : ['prices', 'fx'], usage: [], more: ['aa', 'prices', 'fx'], thanks: [], workshop: [], news: ['news'] }[st.tab];
     var all = Object.keys(C.sources).map(function (k) { return C.sources[k]; });
     var rel = ids.length ? ids.map(function (k) { return C.sources[k]; }).filter(Boolean) : all;
     var busy = all.some(function (s) { return s.refreshing; });
@@ -517,9 +524,11 @@
         var unit = met.money ? '每百万字' : met.pct ? '%' : met.elo ? '对战分' : (met.u || '');
         var title = m.releaseName || m.shortName || m.name;
         var tier = allTiers ? effortName(m) : '';
-        return '<button class="row' + (isFav(key) ? ' fav' : '') + '" data-i="' + i + '">' + (isFav(key) ? '<i class="gdot"></i>' : '') + seal(i + 1) +
+        // 前三名加 pod-N 标记，由「殿堂感」效果插件（若启用）决定外观；未启用时无任何变化
+        var pod = (i < 3) ? ' pod pod-' + (i + 1) : '';
+        return '<button class="row' + pod + (isFav(key) ? ' fav' : '') + '" data-i="' + i + '">' + (isFav(key) ? '<i class="gdot"></i>' : '') + seal(i + 1) +
           '<div class="mid"><div class="nm">' + logo(m.creatorName) + '<span class="nt">' + esc(title) + '</span></div>' +
-          '<div class="sub">' + esc(m.creatorName || '') + (tier ? ' · ' + esc(tier) : '') + (F.isOpen(m) ? ' · 开源' : '') + '</div>' +
+          '<div class="sub">' + esc(m.creatorName || '') + (flagImg(m.creatorName) ? ' ' + flagImg(m.creatorName) : '') + (tier ? ' · ' + esc(tier) : '') + (F.isOpen(m) ? ' · 开源' : '') + '</div>' +
           '<div class="bar-track"><div class="bar" style="width:' + w1.toFixed(1) + '%"></div></div></div>' +
           '<div class="val">' + vs + (unit ? '<small>' + unit + '</small>' : '') + '</div></button>';
       }).join('') + '</div>';
@@ -701,6 +710,7 @@
   moreMod = w.registerMoreViews({ page: page, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, go: go, openDlg: openDlg, closeDlg: closeDlg, pickDlg: pickDlg });
   moreMod.setUpdateDlg(updateDlg);
   VIEWS.usage = moreMod.usage; VIEWS.more = moreMod.more; VIEWS.thanks = moreMod.thanks;
+  if (w.registerWorkshopView) { var wsMod = w.registerWorkshopView({ page: page, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, go: go }); VIEWS.workshop = wsMod.view; }
   if (w.News) VIEWS.news = w.News.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, debounce: debounce, go: go });
   if (w.CnBench) VIEWS.cn = w.CnBench.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, render: render, debounce: debounce });
   if (w.TokenCalc) {

@@ -389,3 +389,90 @@ table.cmp .rm{color:var(--ink3);font-size:15px;line-height:1;padding:0 0 0 5px}
 #sheet blockquote{margin:6px 0;padding:6px 10px;border-left:3px solid var(--line);color:var(--ink2);font-size:13px}
 .g5{color:var(--zhu)}.g4{color:var(--jin)}.g3{color:var(--ink)}.g2{color:var(--ink2)}.g1{color:var(--ink3)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== 背景插件：开启时页面底色与主体区透明，露出背景层；关闭时完全不变 ===== */
+body.has-bg,body.has-bg html{background:transparent}
+body.has-bg #page{background:transparent}
+
+/* ===== 宫殿背景：开启时，大部分文字区域改为透明底，让宫殿图透出来 ===== */
+body.has-bg #page .row,body.has-bg #page .card,body.has-bg #page .list,body.has-bg #page .chartbox{background:transparent}
+body.has-bg #page .list.boxed,body.has-bg #page .card{border-color:rgba(127,127,140,.25)}
+body.has-bg .row{border-bottom-color:rgba(127,127,140,.18)}
+body.has-bg #tabs,body.has-bg #top{background:rgba(12,16,24,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+html[data-theme=light] body.has-bg #tabs,html[data-theme=light] body.has-bg #top{background:rgba(246,247,250,.6)}
+body.has-bg .ink,body.has-bg .nt,body.has-bg .nm{text-shadow:0 1px 2px rgba(0,0,0,.35)}
+/* 宫殿背景下，数字与正文保持可读：不透明度不低于原本 */
+body.has-bg .row .val,body.has-bg .row .nt{color:var(--ink)}
+
+/* ===== 殿堂感效果（效果插件）：仅在 body 带 pod-gold/pod-silver/pod-bronze 时生效 ===== */
+/* 行不加左右 margin（.row 已是 width:100%，外加 margin 会把右边顶出列表）。
+   金属边框用 ::before 的 mask 镂空实现；反光用 ::after 的斜向高光扫过动画。 */
+body.pod-gold .row.pod-1,body.pod-silver .row.pod-2,body.pod-bronze .row.pod-3{position:relative;overflow:hidden;isolation:isolate;border-bottom:0;margin:0;box-sizing:border-box}
+body.pod-gold .row.pod-1::before,body.pod-silver .row.pod-2::before,body.pod-bronze .row.pod-3::before{content:"";position:absolute;inset:0;padding:1px;border-radius:0;pointer-events:none;z-index:0;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+/* 底纹 + 反光层：纹样常驻，高光带从左到右扫过 */
+body.pod-gold .row.pod-1::after,body.pod-silver .row.pod-2::after,body.pod-bronze .row.pod-3::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background-size:auto,auto,220% 100%;animation:podSheen 1.6s ease-out 1 both}
+body.pod-gold .row.pod-1>:not(.gdot),body.pod-silver .row.pod-2>:not(.gdot),body.pod-bronze .row.pod-3>:not(.gdot){position:relative;z-index:1}
+
+/* 第一名 · 金 */
+body.pod-gold .row.pod-1{background:linear-gradient(135deg,#2A2110 0%,#1A1508 55%,#2E2410 100%)}
+body.pod-gold .row.pod-1::before{background:linear-gradient(120deg,#8A6A1E,#F3D77A 22%,#B8862C 48%,#FFF1B0 62%,#8A6A1E 86%,#D9B45A)}
+body.pod-gold .row.pod-1::after{background-image:repeating-linear-gradient(45deg,rgba(243,215,122,.09) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(243,215,122,.07) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,244,190,.16) 50%,transparent 58%)}
+body.pod-gold .row.pod-1 .seal{margin-top:12px;background:url(../assets/podium/medal-gold.webp) center/contain no-repeat;border-color:transparent;color:#2A1E05;box-shadow:none;text-shadow:0 0 2px rgba(255,255,255,.6)}
+body.pod-gold .row.pod-1 .nt{color:#F6E7B0}
+body.pod-gold .row.pod-1 .sub{color:#B9A373}
+body.pod-gold .row.pod-1 .val{color:#F6E7B0}
+
+/* 第二名 · 银 */
+body.pod-silver .row.pod-2{background:linear-gradient(135deg,#1E2228 0%,#14171C 55%,#21262D 100%)}
+body.pod-silver .row.pod-2::before{background:linear-gradient(120deg,#6B7480,#E6EBF2 24%,#9AA3AE 50%,#F7FAFF 64%,#6B7480 88%,#C5CCD6)}
+body.pod-silver .row.pod-2::after{background-image:repeating-linear-gradient(45deg,rgba(220,228,238,.08) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(220,228,238,.06) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(240,246,255,.13) 50%,transparent 58%)}
+body.pod-silver .row.pod-2 .seal{background:url(../assets/podium/medal-silver.webp) center/contain no-repeat;border-color:transparent;color:#1A1E25;box-shadow:none;text-shadow:0 0 2px rgba(255,255,255,.6)}
+body.pod-silver .row.pod-2 .nt{color:#E9EEF5}
+body.pod-silver .row.pod-2 .sub{color:#8D97A4}
+body.pod-silver .row.pod-2 .val{color:#E9EEF5}
+
+/* 第三名 · 铜 */
+body.pod-bronze .row.pod-3{background:linear-gradient(135deg,#2A1A10 0%,#1C110A 55%,#2C1B11 100%)}
+body.pod-bronze .row.pod-3::before{background:linear-gradient(120deg,#7A4A24,#E09A62 24%,#A8673A 50%,#F2B888 64%,#7A4A24 88%,#C98452)}
+body.pod-bronze .row.pod-3::after{background-image:repeating-linear-gradient(45deg,rgba(224,154,98,.09) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(224,154,98,.07) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,205,160,.13) 50%,transparent 58%)}
+body.pod-bronze .row.pod-3 .seal{background:url(../assets/podium/medal-bronze.webp) center/contain no-repeat;border-color:transparent;color:#2A1608;box-shadow:none;text-shadow:0 0 2px rgba(255,255,255,.6)}
+body.pod-bronze .row.pod-3 .nt{color:#F2D2B0}
+body.pod-bronze .row.pod-3 .sub{color:#B68A66}
+body.pod-bronze .row.pod-3 .val{color:#F2D2B0}
+
+/* 第一名头顶小皇冠：仅殿堂效果开启且名次为 1 时显示。纯 CSS 图形（内联 SVG 背景），不加载图片。 */
+body.pod-gold .row.pod-1 .seal{position:relative}
+body.pod-gold .row.pod-1 .seal::before{content:"";position:absolute;left:50%;top:-18px;width:24px;height:16px;transform:translateX(-50%);pointer-events:none;z-index:3;background:url(../assets/podium/crown.webp) center/contain no-repeat}
+
+/* ===== 浅色模式变体：金属色保留，底色改为浅色金属纸，文字改深色 ===== */
+html[data-theme=light] body.pod-gold .row.pod-1{background:linear-gradient(135deg,#FBF3D6 0%,#F6E8B8 55%,#FDF5DC 100%)}
+html[data-theme=light] body.pod-gold .row.pod-1::after{background-image:repeating-linear-gradient(45deg,rgba(150,108,20,.10) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(150,108,20,.08) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,255,255,.55) 50%,transparent 58%)}
+html[data-theme=light] body.pod-gold .row.pod-1 .nt{color:#4A3606}
+html[data-theme=light] body.pod-gold .row.pod-1 .sub{color:#8A6A2A}
+html[data-theme=light] body.pod-gold .row.pod-1 .val{color:#4A3606}
+
+html[data-theme=light] body.pod-silver .row.pod-2{background:linear-gradient(135deg,#F7F9FB 0%,#E9EEF4 55%,#FBFCFE 100%)}
+html[data-theme=light] body.pod-silver .row.pod-2::after{background-image:repeating-linear-gradient(45deg,rgba(80,92,110,.08) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(80,92,110,.06) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,255,255,.6) 50%,transparent 58%)}
+html[data-theme=light] body.pod-silver .row.pod-2 .nt{color:#232A34}
+html[data-theme=light] body.pod-silver .row.pod-2 .sub{color:#667282}
+html[data-theme=light] body.pod-silver .row.pod-2 .val{color:#232A34}
+
+html[data-theme=light] body.pod-bronze .row.pod-3{background:linear-gradient(135deg,#FBEBDD 0%,#F4DCC4 55%,#FDF1E6 100%)}
+html[data-theme=light] body.pod-bronze .row.pod-3::after{background-image:repeating-linear-gradient(45deg,rgba(140,82,40,.09) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(140,82,40,.07) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,255,255,.5) 50%,transparent 58%)}
+html[data-theme=light] body.pod-bronze .row.pod-3 .nt{color:#55301A}
+html[data-theme=light] body.pod-bronze .row.pod-3 .sub{color:#8A5E3A}
+html[data-theme=light] body.pod-bronze .row.pod-3 .val{color:#55301A}
+
+/* 反光扫过：高光带横向移动，三档共用 */
+@keyframes podSheen{0%{background-position:0 0,0 0,-120% 0}100%{background-position:0 0,0 0,120% 0}}
+/* 名次徽记微闪光：每 4 秒一次，使徽记像金属反光 */
+body.pod-gold .row.pod-1 .seal,body.pod-silver .row.pod-2 .seal,body.pod-bronze .row.pod-3 .seal{animation:podGlint 1.2s ease-out 1 both}
+@keyframes podGlint{0%{filter:brightness(1)}40%{filter:brightness(1.12)}100%{filter:brightness(1)}}
+/* 减少动态效果的用户：去掉动画，保留静态金属色 */
+@media (prefers-reduced-motion: reduce){
+  body.pod-gold .row.pod-1::after,body.pod-silver .row.pod-2::after,body.pod-bronze .row.pod-3::after,
+  body.pod-gold .row.pod-1 .seal,body.pod-silver .row.pod-2 .seal,body.pod-bronze .row.pod-3 .seal{animation:none}
+}
+
+/* 厂商国旗小图：模型行副标题里，紧跟厂商名 */
+.sub .flag{display:inline-block;width:13px;height:9px;margin-left:3px;vertical-align:-1px;border-radius:1px;box-shadow:0 0 0 .5px rgba(0,0,0,.18);object-fit:cover}
