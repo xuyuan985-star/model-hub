@@ -426,6 +426,25 @@ body.pod-bronze .row.pod-3 .nt{color:#F2D2B0}
 body.pod-bronze .row.pod-3 .sub{color:#B68A66}
 body.pod-bronze .row.pod-3 .val{color:#F2D2B0}
 
+/* ===== 浅色模式变体：金属色保留，底色改为浅色金属纸，文字改深色 ===== */
+html[data-theme=light] body.pod-gold .row.pod-1{background:linear-gradient(135deg,#FBF3D6 0%,#F6E8B8 55%,#FDF5DC 100%)}
+html[data-theme=light] body.pod-gold .row.pod-1::after{background-image:repeating-linear-gradient(45deg,rgba(150,108,20,.10) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(150,108,20,.08) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,255,255,.55) 50%,transparent 58%)}
+html[data-theme=light] body.pod-gold .row.pod-1 .nt{color:#4A3606}
+html[data-theme=light] body.pod-gold .row.pod-1 .sub{color:#8A6A2A}
+html[data-theme=light] body.pod-gold .row.pod-1 .val{color:#4A3606}
+
+html[data-theme=light] body.pod-silver .row.pod-2{background:linear-gradient(135deg,#F7F9FB 0%,#E9EEF4 55%,#FBFCFE 100%)}
+html[data-theme=light] body.pod-silver .row.pod-2::after{background-image:repeating-linear-gradient(45deg,rgba(80,92,110,.08) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(80,92,110,.06) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,255,255,.6) 50%,transparent 58%)}
+html[data-theme=light] body.pod-silver .row.pod-2 .nt{color:#232A34}
+html[data-theme=light] body.pod-silver .row.pod-2 .sub{color:#667282}
+html[data-theme=light] body.pod-silver .row.pod-2 .val{color:#232A34}
+
+html[data-theme=light] body.pod-bronze .row.pod-3{background:linear-gradient(135deg,#FBEBDD 0%,#F4DCC4 55%,#FDF1E6 100%)}
+html[data-theme=light] body.pod-bronze .row.pod-3::after{background-image:repeating-linear-gradient(45deg,rgba(140,82,40,.09) 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,rgba(140,82,40,.07) 0 1px,transparent 1px 9px),linear-gradient(105deg,transparent 42%,rgba(255,255,255,.5) 50%,transparent 58%)}
+html[data-theme=light] body.pod-bronze .row.pod-3 .nt{color:#55301A}
+html[data-theme=light] body.pod-bronze .row.pod-3 .sub{color:#8A5E3A}
+html[data-theme=light] body.pod-bronze .row.pod-3 .val{color:#55301A}
+
 /* 反光扫过：高光带横向移动，三档共用 */
 @keyframes podSheen{0%{background-position:0 0,0 0,-120% 0}100%{background-position:0 0,0 0,120% 0}}
 /* 名次徽记微闪光：每 4 秒一次，使徽记像金属反光 */
