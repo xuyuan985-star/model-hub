@@ -326,4 +326,55 @@ table.cmp .rm{color:var(--ink3);font-size:15px;line-height:1;padding:0 0 0 5px}
 
 #toast{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 15px;border-radius:4px;font-size:13px;z-index:20;max-width:86%;text-align:center}
 
+/* ===== v1.1.2 新增：顶栏快讯入口、范围分段、厂商芯片、居中对话框与选择器 ===== */
+.mseg{flex:none;display:inline-flex;height:36px;padding:3px;gap:2px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2)}
+.mseg button{padding:0 10px;border-radius:4px;font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.mseg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.07)}
+.chip.more{color:var(--dian);border-style:dashed}
+.vchip.star.on{background:var(--jin-soft);border-color:var(--jin);color:var(--jin)}
+.slim{display:flex;justify-content:flex-end;padding:0 16px 8px}
+.dgrp{margin:12px 0 6px;color:var(--ink3);font-size:12px}
+.dgrid{display:flex;flex-wrap:wrap;gap:7px}
+.dgrid .chip{font-size:13px}
+#dlg.wide{width:min(92vw,400px)}
+/* 紧凑工具行：搜索框 + 开源/国产小分段同排 */
+.tools .mseg{flex:none;margin-left:auto}
+
+.vchips{display:flex;gap:7px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
+.vchips::-webkit-scrollbar{display:none}
+.vchip{display:inline-flex;align-items:center;gap:6px;flex:none;padding:5px 11px 5px 7px;border:1px solid var(--line);border-radius:99px;background:var(--surface);font-size:13px;color:var(--ink);white-space:nowrap}
+.vchip .lg{margin-right:0;width:18px;height:18px}
+.vchip .lg img{width:12px;height:12px}
+.vchip.txt{padding-left:11px}
+.vchip.txt.star{padding-left:11px;color:var(--jin);border-color:var(--jin)}
+.vchip.txt.star.on{background:var(--jin);border-color:var(--jin);color:#fff}
+.vchip.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.vchip.more{color:var(--dian);border-style:dashed;padding-left:11px}
+
+#dlgMask{position:fixed;inset:0;background:var(--mask);z-index:30}
+#dlg{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(86vw,340px);max-height:74%;overflow-y:auto;background:var(--surface);border-radius:14px;z-index:31;padding:18px 16px 14px;box-shadow:0 12px 40px rgba(0,0,0,.28);animation:pop .16s ease-out}
+#dlg[hidden],#dlgMask[hidden]{display:none}
+@keyframes pop{from{transform:translate(-50%,-46%) scale(.96);opacity:0}}
+#dlg h3{margin:0 0 4px;font:700 18px/1.3 var(--serif);color:var(--ink)}
+#dlg .dsub{margin:0 0 10px;color:var(--ink2);font-size:12.5px;line-height:1.5}
+#dlg .dnotes{max-height:32vh;overflow-y:auto;margin:6px 0 4px;padding:8px 10px;border-radius:8px;background:var(--surface-2)}
+.dbtns{display:flex;gap:8px;margin-top:14px}
+.dbtns .btn{flex:1;padding:10px 12px}
+.opt{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 10px;border-radius:8px;text-align:left;font-size:14.5px;color:var(--ink)}
+.opt:active{background:var(--surface-2)}
+.opt.on{color:var(--zhu);font-weight:600}
+.opt.on::after{content:"✓"}
+.opt small{display:block;color:var(--ink3);font-size:11.5px;font-weight:400;margin-top:1px}
+.sel{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:13px;color:var(--ink);max-width:64%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sel::after{content:"▾";color:var(--ink3);font-size:11px}
+.sel.full{max-width:none;width:100%;height:40px;justify-content:space-between;background:var(--paper);font-size:14px}
+.foot{margin:0;padding:12px 16px 26px;text-align:center;color:var(--ink3);font-size:11.5px;line-height:1.5}
+.foot a{color:var(--ink2);border-bottom:1px dashed var(--line)}
+.vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:4px 0 2px}
+.vcell{display:flex;align-items:center;gap:7px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;text-align:left;min-width:0}
+.vcell .lg{margin-right:0}
+.vcell b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.vcell em{font-style:normal;margin-left:auto;color:var(--ink3);font-size:11.5px}
+.vcell.on{border-color:var(--zhu);background:var(--zhu-soft)}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

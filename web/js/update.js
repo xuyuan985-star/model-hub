@@ -182,11 +182,56 @@
     return list.length ? list[0].url : '';
   };
 
-  /** 启动后自动静默检查一次（6 小时内不重复）。 */
+  /**
+   * 一键更新：下载（自动换镜像 + 校验）并拉起安装。进度放在 U.dl，通过 'updl' 事件通知界面，
+   * 弹窗和「更多」页的更新卡片共用这一份状态。
+   */
+  U.dl = null;
+  U.start = function () {
+    if (U.dl || !U.latest || !U.latest.apk) return;
+    var asset = U.latest.apk, last = 0;
+    U.dl = { pct: 0, via: '', total: asset.size || 0 };
+    C.emit('updl');
+    U.download(asset, function (p) {
+      if (!U.dl) return;
+      U.dl.pct = 0; U.dl.via = p.name || ''; C.emit('updl');
+    }, function (got, total) {
+      var now = Date.now();
+      if (!U.dl || (now - last < 250 && got < total)) return;
+      last = now;
+      U.dl.total = total || asset.size || 0;
+      U.dl.pct = U.dl.total ? Math.min(100, Math.round(got / U.dl.total * 100)) : 0;
+      C.emit('updl');
+    }).then(function (r) {
+      if (!r.ok) { U.dl = null; C.emit('updl', { done: true, ok: false, msg: r.error || '下载失败' }); return; }
+      if (U.dl) { U.dl.pct = 100; C.emit('updl'); }
+      var res;
+      try { res = JSON.parse(w.Native.installApk()); } catch (e) { res = { ok: false, error: String(e && e.message || e) }; }
+      var msg = res.ok ? '校验通过，按提示完成安装'
+        : res.need === 'permission' ? '请先允许安装，返回后再点一次更新'
+        : (res.error || '未能拉起安装界面');
+      setTimeout(function () { U.dl = null; C.emit('updl', { done: true, ok: !!res.ok, msg: msg }); }, 600);
+    });
+  };
+
+  /** 「稍后再说」：同一个版本 24 小时内不再自动弹窗。 */
+  var SNOOZE = 'update.snooze';
+  U.snooze = function () {
+    if (!U.latest) return;
+    try { w.localStorage.setItem(SNOOZE, JSON.stringify({ tag: U.latest.tag, at: Date.now() })); } catch (e) {}
+  };
+  U.snoozed = function () {
+    try {
+      var s = JSON.parse(w.localStorage.getItem(SNOOZE) || 'null');
+      return !!(s && U.latest && s.tag === U.latest.tag && Date.now() - s.at < 24 * 3600 * 1000);
+    } catch (e) { return false; }
+  };
+
+  /** 每次打开应用都静默检查一次（30 分钟内不重复），查到新版由界面弹窗提醒。 */
   U.autoCheck = function () {
     var KEY = 'update.checkedAt', last = 0;
     try { last = parseInt(w.localStorage.getItem(KEY) || '0', 10) || 0; } catch (e) { last = 0; }
-    if (Date.now() - last < 6 * 3600 * 1000) return null;
+    if (Date.now() - last < 30 * 60 * 1000 && U.latest) return null;
     return U.check().then(function (r) {
       if (r) { try { w.localStorage.setItem(KEY, String(Date.now())); } catch (e) {} }
       return r;

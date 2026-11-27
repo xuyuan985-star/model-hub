@@ -107,20 +107,21 @@
     });
   }
 
-  /** 榜单页顶部单行快讯头条条幅 HTML（置顶速报优先，否则显示最新一条；在「更多」里可关）。 */
-  NS.bannerHtml = function () {
-    if (C.settings.showNewsBar === false) return '';
+  /** 是否有没看过的置顶速报（底部「快讯」标签亮红点用）。 */
+  NS.hasUnseenPin = function () {
     var s = C.sources.news;
-    var items = (s && s.data && s.data.items) || [];
-    var top = items[0];
-    if (!top) {
-      var loc = localPriceItems()[0];
-      if (!loc) return '';
-      top = loc;
-    }
-    var badge = top.pin ? '<span class="nbadge pin">速报</span>' : '<span class="nbadge">快讯</span>';
-    return '<div class="pad" style="margin-bottom:6px"><button class="news-bar" id="openNews">' +
-      badge + '<span class="ntxt">' + esc(cleanText(top.title)) + '</span><span class="nar">›</span></button></div>';
+    var pins = ((s && s.data && s.data.items) || []).filter(function (x) { return !!x.pin; });
+    if (!pins.length) return false;
+    var seen = 0;
+    try { seen = +(w.localStorage.getItem('news.pinSeen') || 0); } catch (e) { seen = 0; }
+    return pins.some(function (x) { return (x.at || 0) > seen; });
+  };
+  NS.markPinsSeen = function () {
+    var s = C.sources.news;
+    var pins = ((s && s.data && s.data.items) || []).filter(function (x) { return !!x.pin; });
+    if (!pins.length) return;
+    var max = Math.max.apply(null, pins.map(function (x) { return x.at || 0; }));
+    try { w.localStorage.setItem('news.pinSeen', String(Math.max(max, Date.now() - 60000))); } catch (e) {}
   };
 
   function catLabel(c) {
@@ -162,7 +163,7 @@
       var remote = (s && s.data && s.data.items) || [];
       var cat = st.newsCat || 'all';
       var locals = localPriceItems();
-      var all = remote.concat(cat === 'model' ? locals : locals.slice(0, 2));
+      var all = remote.concat(locals);
       all.sort(function (a, b) {
         return (Number(!!b.pin) - Number(!!a.pin)) || (Number(!!b.urgent) - Number(!!a.urgent)) || (Number(!!a.local) - Number(!!b.local)) || ((b.at || 0) - (a.at || 0));
       });
@@ -185,15 +186,17 @@
         rows = rows.filter(function (x) { return (x.title + ' ' + (x.summary || '') + ' ' + (x.src || '')).toLowerCase().indexOf(q) >= 0; });
       }
       var shown = rows.slice(0, st.rankLimit || 50);
+      // 进入快讯页即视为看过置顶速报，底部标签的红点随之熄灭
+      if (rows.some(function (x) { return !!x.pin; })) NS.markPinsSeen();
 
       var html = '<div class="chips">' + cats.map(function (c) {
-        return '<button class="chip' + (c[0] === cat ? ' on' : '') + '" data-nc="' + c[0] + '">' + esc(c[1]) + '</button>';
+        var n = c[0] === 'all' ? all.length : c[0] === 'pin' ? all.filter(function (x) { return !!x.pin; }).length : all.filter(function (x) { return x.cat === c[0]; }).length;
+        return '<button class="chip' + (c[0] === cat ? ' on' : '') + '" data-nc="' + c[0] + '">' + esc(c[1]) + (n ? ' ' + n : '') + '</button>';
       }).join('') + '</div>' +
         '<div class="tools"><div class="sbox"><input class="search" id="newsQ" placeholder="搜索快讯关键词（如 GPT、调价、DeepSeek）" value="' + esc(st.newsQ || '') + '">' +
         (st.newsQ ? '<button class="sclr" data-clr="newsQ" aria-label="清空">×</button>' : '') + '</div>' +
         '<button class="tog" id="rssCfg">订阅源</button></div>' +
-        '<div class="hint"><span>' + rows.length + ' 条快讯 · 每日自动轮换</span>' +
-        '<button class="fmore" id="newsBack">返回榜单 ›</button></div>';
+        '<div class="hint"><span>' + rows.length + ' 条快讯 · 每日自动轮换</span><span>订阅源可自定义</span></div>';
 
       if (!shown.length) {
         html += '<div class="empty"><b>' + (cat === 'pin' ? '暂时没有置顶速报' : '没有符合的快讯') + '</b>' +
@@ -226,7 +229,6 @@
       }, 250));
       var clr = page.querySelector('[data-clr="newsQ"]'); if (clr) clr.onclick = function () { st.newsQ = ''; render(); };
       $('#rssCfg').onclick = customRssSheet;
-      $('#newsBack').onclick = function () { A.go('rank'); };
       if ($('#moreN')) $('#moreN').onclick = function () { st.rankLimit += 30; render(); };
       var lst = page.querySelector('.list');
       if (lst) lst.addEventListener('click', function (e) {

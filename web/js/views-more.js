@@ -3,7 +3,6 @@
   'use strict';
   var C = w.Core, U = w.Usage, X = w.Extra, esc = C.esc;
   var $ = function (s, r) { return (r || document).querySelector(s); };
-  var dlState = null;
 
   function sizeOf(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
   function fmtNum(v, d) { return v == null ? '—' : (+v).toFixed(d == null ? 1 : d); }
@@ -34,7 +33,24 @@
 
   w.registerMoreViews = function (A) {
     var page = A.page, toast = A.toast, openSheet = A.openSheet, closeSheet = A.closeSheet;
-    var confirmSheet = A.confirmSheet, render = A.render, go = A.go;
+    var confirmSheet = A.confirmSheet, render = A.render, go = A.go, pickDlg = A.pickDlg, openDlg = A.openDlg;
+    var updateDlgFn = null;
+    function setUpdateDlg(fn) { updateDlgFn = fn; }
+
+    // 偏好设置：用居中小选择器代替原生下拉（v1.1.2）
+    var PREFS = [
+      { id: 'cur', name: '显示币种', opts: [['USD', '美元 $'], ['CNY', '人民币 ¥']], get: function () { return C.settings.currency || 'USD'; }, set: function (v) { C.saveSettings({ currency: v }); } },
+      { id: 'th', name: '外观主题', opts: [['auto', '跟随系统'], ['light', '浅色'], ['dark', '深色']], get: function () { return C.settings.theme || 'auto'; }, set: function (v) { C.saveSettings({ theme: v }); } },
+      { id: 'bl', name: '混合价比例', opts: [['1', '1 : 1'], ['3', '3 : 1'], ['5', '5 : 1'], ['10', '10 : 1']], get: function () { return String(C.settings.blend || 3); }, set: function (v) { C.saveSettings({ blend: +v }); toast('已更新混合价比例'); } },
+      { id: 'dd', name: '榜单档位', opts: [['1', '只留最高档'], ['0', '全部档位']], get: function () { return C.settings.aaDedupe ? '1' : '0'; }, set: function (v) { C.saveSettings({ aaDedupe: v === '1' }); toast('已更新'); } },
+      { id: 'dr', name: '数据抓取线路', opts: [['auto', '直连（失败走国内镜像）', '默认，有梯子时更实时'], ['mirror', '仅国内镜像', '无梯推荐'], ['direct', '仅直连原站', '只走官方原站']], get: function () { return C.settings.dataRoute || 'auto'; }, set: function (v) { C.saveSettings({ dataRoute: v }); toast('已切换数据线路'); } }
+    ];
+    function prefLabel(p) { var cur = p.get(); var hit = p.opts.filter(function (o) { return String(o[0]) === String(cur); })[0]; return hit ? hit[1] : String(cur); }
+    function prefRows() {
+      return PREFS.map(function (p) {
+        return '<div class="kv"><span>' + esc(p.name) + '</span><button class="sel" id="pf_' + p.id + '">' + esc(prefLabel(p)) + '</button></div>';
+      }).join('');
+    }
 
     // ================= 额度 =================
     function noUsageSheet(u) {
@@ -215,33 +231,12 @@
     }
 
     function doDownload(asset) {
-      var last = 0;
-      w.Update.download(asset, function (p) {
-        if (!dlState) dlState = { pct: 0 };
-        dlState.pct = 0; dlState.try = p.step; dlState.via = p.name || '';
-        upCard();
-      }, function (got, total) {
-        var now = Date.now();
-        if (now - last < 250 && got < total) return;
-        last = now;
-        if (!dlState) dlState = {};
-        dlState.total = total || (asset && asset.size) || 0;
-        dlState.pct = dlState.total ? Math.min(100, Math.round(got / dlState.total * 100)) : 0;
-        upCard();
-      }).then(function (r) {
-        if (!r.ok) { dlState = null; toast(r.error); upCard(); return; }
-        if (dlState) { dlState.pct = 100; upCard(); }
-        var res; try { res = JSON.parse(w.Native.installApk()); } catch (e) { res = { ok: false, error: String(e && e.message || e) }; }
-        if (res.ok) toast('校验通过，按提示完成安装');
-        else if (res.need === 'permission') toast('允许安装后返回再点一次下载');
-        else toast(res.error || '未能拉起安装界面');
-        setTimeout(function () { dlState = null; upCard(); }, 600);
-      });
+      w.Update.start();
     }
 
     function upCard() {
       var el = $('#upcard'); if (!el) return;
-      var Up = w.Update, v = Up.current(), l = Up.latest, d = dlState;
+      var Up = w.Update, v = Up.current(), l = Up.latest, d = Up.dl;
       var pref = C.settings.updateMirror || 'auto';
       var prefName = pref === 'auto' ? '国内加速自动' : ((Up.MIRRORS || []).filter(function (m) { return m.id === pref; })[0] || { name: pref }).name;
       var statusTag = Up.checking ? '<span class="tag">检查中…</span>'
@@ -257,7 +252,7 @@
       }
       h += '<div class="btns">' +
         (l && l.newer
-          ? '<button class="btn sm main" id="dl"' + (d ? ' disabled' : '') + '>' + (d ? '下载中…' : '镜像下载' + (l.apk ? '（' + sizeOf(l.apk.size) + '）' : '')) + '</button>'
+          ? '<button class="btn sm main" id="dl"' + (d ? ' disabled' : '') + '>' + (d ? '下载中…' : '一键更新' + (l.apk ? '（' + sizeOf(l.apk.size) + '）' : '')) + '</button>'
           : '<button class="btn sm" id="ck">检查更新</button>') +
         '<button class="btn sm" id="mir">选择线路</button>' +
         (l && l.newer && l.apk ? '<button class="btn sm" id="cpUrl">复制链接</button>' : '') +
@@ -277,7 +272,7 @@
           $('#cl').onclick = closeSheet;
         });
       };
-      if ($('#dl')) $('#dl').onclick = function () { dlState = { pct: 0 }; upCard(); doDownload(l.apk); };
+      if ($('#dl')) $('#dl').onclick = function () { Up.start(); };
     }
 
     function aaCard() {
@@ -326,13 +321,13 @@
     function viewMore() {
       var feed = C.feed || [];
       var html = '<div class="sec" style="padding-top:6px">偏好设置</div><div class="card">' +
-        '<div class="kv"><span>显示币种</span><select class="inline" id="cur"><option value="USD">美元 $</option><option value="CNY">人民币 ¥</option></select></div>' +
-        '<div class="kv"><span>外观主题</span><select class="inline" id="th"><option value="auto">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>' +
-        '<div class="kv"><span>混合价比例</span><select class="inline" id="bl"><option value="1">1 : 1</option><option value="3">3 : 1</option><option value="5">5 : 1</option><option value="10">10 : 1</option></select></div>' +
-        '<div class="kv"><span>榜单档位</span><select class="inline" id="dd"><option value="1">只留最高档</option><option value="0">全部档位</option></select></div>' +
-        '<div class="kv"><span>榜单头条快讯</span><select class="inline" id="nb"><option value="1">显示</option><option value="0">隐藏</option></select></div>' +
-        '<div class="kv"><span>数据抓取线路</span><select class="inline" id="dr"><option value="auto">直连（失败走国内镜像）</option><option value="mirror">仅国内镜像（无梯推荐）</option><option value="direct">仅直连原站</option></select></div></div>' +
+        prefRows() + '</div>' +
         '<div class="sec">版本与数据源</div><div class="card" id="upcard"></div><div class="card" id="aacard"></div>';
+      // 有新版时给一个醒目的弹窗入口，免得用户只在「更多」里看到小红点
+      if (w.Update && w.Update.latest && w.Update.latest.newer) {
+        html = html.replace('<div class="sec">版本与数据源</div>',
+          '<div class="fhead"><span>版本与数据源</span><button class="fmore" id="upNow">发现新版本 ' + esc(w.Update.latest.tag) + '，一键更新 ›</button></div>');
+      }
 
       // 变动记录默认只放 3 条紧凑预览，点「全部」进弹层看，也可直达 AI 快讯页
       html += '<div class="fhead"><span>最近变动与快讯</span><span>' +
@@ -349,19 +344,14 @@
         '<div class="thankswrap"><button id="thx" class="btn sm ghost">觉得好用？请作者喝杯茶</button></div>';
 
       page.innerHTML = html;
-      $('#cur').value = C.settings.currency; $('#th').value = C.settings.theme;
-      $('#bl').value = String(C.settings.blend); $('#dd').value = C.settings.aaDedupe ? '1' : '0';
-      $('#nb').value = C.settings.showNewsBar === false ? '0' : '1';
-      $('#dr').value = C.settings.dataRoute || 'auto';
+      PREFS.forEach(function (p) {
+        var b = $('#pf_' + p.id); if (!b) return;
+        b.onclick = function () { pickDlg(p.name, p.opts, p.get(), function (v) { p.set(v); render(); }); };
+      });
       upCard(); aaCard();
       if ($('#goNews')) $('#goNews').onclick = function () { go('news'); };
+      if ($('#upNow')) $('#upNow').onclick = function () { if (updateDlgFn) updateDlgFn(); };
       if ($('#fmore')) $('#fmore').onclick = function () { openFeedSheet(feed); };
-      $('#cur').onchange = function (e) { C.saveSettings({ currency: e.target.value }); render(); };
-      $('#th').onchange = function (e) { C.saveSettings({ theme: e.target.value }); };
-      $('#bl').onchange = function (e) { C.saveSettings({ blend: +e.target.value }); toast('已更新混合价比例'); };
-      $('#dd').onchange = function (e) { C.saveSettings({ aaDedupe: e.target.value === '1' }); toast('已更新'); };
-      $('#nb').onchange = function (e) { C.saveSettings({ showNewsBar: e.target.value === '1' }); toast('已更新'); };
-      $('#dr').onchange = function (e) { C.saveSettings({ dataRoute: e.target.value }); toast('已切换数据线路'); };
       $('#au').onchange = function (e) { C.saveSettings({ alertUsd: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
       $('#ac').onchange = function (e) { C.saveSettings({ alertCny: Math.max(0, +e.target.value || 0) }); toast('已保存提醒阈值'); };
       $('#rf').onclick = function () { toast('正在刷新…'); C.refreshAll(true).then(function (r) { toast(r.every(Boolean) ? '已刷新' : '部分数据未刷新成功'); render(); }); };
@@ -394,6 +384,6 @@
       $('#bk').onclick = function () { go('more'); };
     }
 
-    return { usage: viewUsage, more: viewMore, thanks: viewThanks, upCard: upCard };
+    return { usage: viewUsage, more: viewMore, thanks: viewThanks, upCard: upCard, setUpdateDlg: setUpdateDlg };
   };
 })(window);

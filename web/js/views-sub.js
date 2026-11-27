@@ -66,7 +66,8 @@
         return;
       }
       var pSort = st.provSort || 'speed';
-      var rows = s.data.rows.slice();
+      var sc = st.provScope || 'all';
+      var rows = s.data.rows.filter(function (r) { return w.Filters.scopeOk(r, sc); });
       if (pSort === 'speed') rows = rows.filter(function (r) { return r.speed > 0; }).sort(function (a, b) { return b.speed - a.speed; });
       else if (pSort === 'ttft') rows = rows.filter(function (r) { return r.ttft > 0; }).sort(function (a, b) { return a.ttft - b.ttft; });
       else rows = rows.filter(function (r) { return r.pBlend > 0; }).sort(function (a, b) { return a.pBlend - b.pBlend; });
@@ -83,8 +84,8 @@
         [['speed', '最快吐字'], ['ttft', '最低首字延迟'], ['price', '最省钱']].map(function (x) {
           return '<button class="chip' + (pSort === x[0] ? ' on' : '') + '" data-ps="' + x[0] + '">' + x[1] + '</button>';
         }).join('') + '</div>' +
-        '<div class="tools">' + searchBox('provQ', st.provQ, '搜模型或托管商（如 DeepSeek、Groq）') + '</div>' +
-        '<div class="hint"><span>Artificial Analysis · ' + rows.length + ' 个托管节点</span><span>按模型搜可比各家速度</span></div>';
+        '<div class="tools">' + searchBox('provQ', st.provQ, '搜模型或托管商（如 DeepSeek、Groq）') + w.Filters.scopeHtml(sc) + '</div>' +
+        '<div class="hint"><span>' + rows.length + ' 个托管节点</span><span>按模型搜可比各家速度</span></div>';
       html += shown.length ? '<div class="list">' + shown.map(function (r, i) {
         var val = pSort === 'speed' ? fmtNum(r.speed, 0) : pSort === 'ttft' ? fmtNum(r.ttft, 2) : C.money(r.pBlend);
         var unit = pSort === 'speed' ? '字/秒' : pSort === 'ttft' ? '秒' : '混合价';
@@ -100,6 +101,7 @@
       page.innerHTML = html;
       bindSeg('.seg', 'data-rm', 'rankMode');
       page.querySelector('.chips').addEventListener('click', function (e) { var b = e.target.closest('[data-ps]'); if (b) { st.provSort = b.getAttribute('data-ps'); st.rankLimit = 60; render(); } });
+      page.querySelector('.mseg').addEventListener('click', function (e) { var b = e.target.closest('[data-scp]'); if (b) { st.provScope = b.getAttribute('data-scp'); st.rankLimit = 60; render(); } });
       $('#provQ').addEventListener('input', debounce(function (e) { st.provQ = e.target.value; st.rankLimit = 60; var pos = e.target.selectionStart; render(); var q = $('#provQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
       bindClr(page, 'provQ', function () { st.provQ = ''; }, render, function () { st.rankLimit = 60; });
       if ($('#moreP')) $('#moreP').onclick = function () { st.rankLimit += 40; render(); };
@@ -120,6 +122,8 @@
       });
     }
 
+    function curScope() { return st.mediaScope || 'all'; }
+
     // ---------- 2) 榜单子视图：生图 / 视频多模态榜 ----------
     function viewMedia(topSeg, kind) {
       var sid = 'aa_' + kind, s = C.sources[sid];
@@ -132,7 +136,8 @@
         bindSeg('.seg', 'data-rm', 'rankMode');
         return;
       }
-      var rows = s.data.rows.slice();
+      var mediaSc = curScope();
+      var rows = s.data.rows.filter(function (r) { return w.Filters.scopeOk(r, mediaSc); });
       if (st.mediaQ) {
         var q = st.mediaQ.toLowerCase();
         rows = rows.filter(function (r) { return (r.name + ' ' + r.creator).toLowerCase().indexOf(q) >= 0; });
@@ -140,7 +145,7 @@
       var shown = rows.slice(0, st.rankLimit || 60);
       var maxE = rows.length ? rows[0].elo : 1300, minE = rows.length ? Math.max(800, rows[rows.length - 1].elo - 40) : 900;
       var html = topSeg +
-        '<div class="tools">' + searchBox('mediaQ', st.mediaQ, '搜索' + (kind === 't2i' ? '生图' : '视频') + '模型或厂商') + '</div>' +
+        '<div class="tools">' + searchBox('mediaQ', st.mediaQ, '搜索' + (kind === 't2i' ? '生图' : '视频') + '模型或厂商') + w.Filters.scopeHtml(mediaSc) + '</div>' +
         '<div class="hint"><span>Artificial Analysis ' + (kind === 't2i' ? '文生图 Elo' : '文生视频 Elo') + ' · ' + rows.length + ' 款</span><span>' + (s.data.source === 'api' ? '官方接口' : '公开榜') + '</span></div>';
       html += shown.length ? '<div class="list">' + shown.map(function (r, i) {
         var pct = Math.max(6, 100 * (r.elo - minE) / Math.max(1, maxE - minE));
@@ -154,6 +159,7 @@
 
       page.innerHTML = html;
       bindSeg('.seg', 'data-rm', 'rankMode');
+      page.querySelector('.mseg').onclick = function (e) { var b = e.target.closest('[data-scp]'); if (b) { st.mediaScope = b.getAttribute('data-scp'); st.rankLimit = 60; render(); } };
       $('#mediaQ').addEventListener('input', debounce(function (e) { st.mediaQ = e.target.value; st.rankLimit = 60; var pos = e.target.selectionStart; render(); var q = $('#mediaQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
       bindClr(page, 'mediaQ', function () { st.mediaQ = ''; }, render, function () { st.rankLimit = 60; });
       if ($('#moreM')) $('#moreM').onclick = function () { st.rankLimit += 40; render(); };
@@ -276,7 +282,7 @@
     // ---------- 5) 性价比子视图：预算选型 / 算账向导 ----------
     function viewCalc(topSeg) {
       var aa = C.sources.aa.data;
-      if (!aa) { page.innerHTML = topSeg + '<div class="empty"><b>正在加载榜单数据</b></div>'; bindSeg('.seg', 'data-vm', 'valMode'); return; }
+      if (!aa) { page.innerHTML = topSeg + '<div class="empty"><b>正在加载榜单数据</b></div>'; bindSeg('.seg', 'data-pm', 'priceMode'); return; }
       var cs = st.calc || { scene: 'code', budgetUsd: 10, inM: 30, outM: 3, cache: 65 };
       st.calc = cs;
       var cny = C.settings.currency === 'CNY', fx = C.fxRate();
@@ -325,7 +331,7 @@
       }
 
       page.innerHTML = html;
-      bindSeg('.seg', 'data-vm', 'valMode');
+      bindSeg('.seg', 'data-pm', 'priceMode');
       page.querySelector('.chips').addEventListener('click', function (e) {
         var b = e.target.closest('[data-sc]'); if (!b) return;
         var sc = K.SCENES.filter(function (x) { return x.id === b.getAttribute('data-sc'); })[0];
