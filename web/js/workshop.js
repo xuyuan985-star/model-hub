@@ -9,7 +9,7 @@
   'use strict';
   var C = w.Core;
   var REPO = 'xuyuan985-star/model-hub';
-  var BRANCH = 'main';
+  var BRANCH = 'main'; // 插件仓库分支；合并前测试可在构建前临时改为 dev
   var RAW = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/';
   var MIRRORS = ['', 'https://ghproxy.net/', 'https://gh-proxy.com/', 'https://ghfast.top/'];
 
