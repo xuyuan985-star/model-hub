@@ -41,7 +41,7 @@
 
   C.on('background', sync);
   C.on('mods', sync);
-  C.on('settings', sync);   // 切换深/浅主题时重新选图
+  C.on('theme', sync);     // 深浅主题属性写好后再选图（系统主题与手动切换都经过这里）
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sync);
   else sync();
   w.Background = { sync: sync };

@@ -41,6 +41,28 @@
 
   function str(v, max) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
 
+  /** 当前 App 版本（来自原生 info，取不到时视为 0.0.0，即只能安装不限版本的插件）。 */
+  function appVersion() {
+    var v = w.Core && w.Core.info && w.Core.info.version;
+    return typeof v === 'string' && SEMVER_RE.test(v) ? v : '0.0.0';
+  }
+  /** 插件声明的适配范围：minApp / maxApp（可选，x.y.z）。不在范围内返回错误文字，否则返回 null。 */
+  function compat(raw) {
+    var app = appVersion();
+    var min = typeof raw.minApp === 'string' ? raw.minApp : '';
+    var max = typeof raw.maxApp === 'string' ? raw.maxApp : '';
+    if (min && !SEMVER_RE.test(min)) return '适配版本 minApp 格式不对';
+    if (max && !SEMVER_RE.test(max)) return '适配版本 maxApp 格式不对';
+    if (min && cmp(app, min) < 0) return '需要 App ' + min + ' 或更高版本（当前 ' + app + '）';
+    if (max && cmp(app, max) > 0) return '此插件仅适配到 App ' + max + '（当前 ' + app + '）';
+    return null;
+  }
+  function cmp(a, b) {
+    var x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+    for (var i = 0; i < 3; i++) { var d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0 ? 1 : -1; }
+    return 0;
+  }
+
   /** 校验并规范化清单。返回 {ok, mod} 或 {ok:false, error}。 */
   function validate(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, error: '清单不是 JSON 对象' };
@@ -51,7 +73,8 @@
     var version = str(raw.version, 20);
     if (!SEMVER_RE.test(version)) return { ok: false, error: 'version 需为 x.y.z 格式' };
     var cat = CATEGORIES[raw.category] ? raw.category : 'ui';
-    var base = { id: id, name: name, version: version, author: str(raw.author, 30), description: str(raw.description, 120), category: cat };
+    var base = { id: id, name: name, version: version, author: str(raw.author, 30), description: str(raw.description, 120), category: cat,
+      minApp: str(raw.minApp, 20), maxApp: str(raw.maxApp, 20), demo: raw.demo === true };
     if (raw.type === 'background') {
       if (!BACKGROUNDS[raw.background]) return { ok: false, error: '背景只能是 ' + Object.keys(BACKGROUNDS).join(' / ') };
       base.type = 'background'; base.background = raw.background;
@@ -131,6 +154,9 @@
       for (var i = 0; i < 3; i++) { var d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0 ? 1 : -1; }
       return 0;
     },
+    /** 检查一条收录项（或清单）能否在当前 App 版本上安装；兼容返回 null，否则返回原因。 */
+    compat: function (entry) { return compat(entry || {}); },
+    appVersion: appVersion,
     CATEGORIES: CATEGORIES,
     get enabledId() { return state.enabled; },
     get effectId() { return state.effect; },
@@ -167,6 +193,9 @@
       try { raw = typeof src === 'string' ? JSON.parse(src) : src; } catch (e) { return { ok: false, error: 'JSON 解析失败' }; }
       var r = validate(raw);
       if (!r.ok) return r;
+      // 适配检查只在安装时做：已装插件不会因为 App 升级而从列表里消失
+      var blocked = compat(r.mod);
+      if (blocked) return { ok: false, error: blocked };
       mods[r.mod.id] = r.mod;
       save();
       return { ok: true, mod: r.mod };

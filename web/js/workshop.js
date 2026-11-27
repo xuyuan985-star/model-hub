@@ -37,7 +37,8 @@
       var arr = idx && Array.isArray(idx.plugins) ? idx.plugins : null;
       if (!arr) throw new Error('收录列表格式不对');
       W.list = arr.filter(function (p) { return p && typeof p.id === 'string' && typeof p.path === 'string'; }).map(function (p) {
-        return { id: p.id, name: String(p.name || p.id).slice(0, 30), version: String(p.version || ''), author: String(p.author || '').slice(0, 30), description: String(p.description || '').slice(0, 120), path: p.path };
+        return { id: p.id, name: String(p.name || p.id).slice(0, 30), version: String(p.version || ''), author: String(p.author || '').slice(0, 30), description: String(p.description || '').slice(0, 120), path: p.path,
+          category: p.category, minApp: p.minApp || '', maxApp: p.maxApp || '', demo: p.demo === true };
       });
       W.loadedAt = Date.now();
       C.store.set('workshop.json', { list: W.list, at: W.loadedAt });

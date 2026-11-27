@@ -11,6 +11,8 @@
   function applyTheme() {
     var t = C.settings.theme, dark = t === 'dark' || (t === 'auto' && C.info.night);
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    // 主题属性写好之后再通知：依赖深浅的模块（宫殿背景）要在这之后读取
+    C.emit('theme');
     try { w.Native.setTheme(dark); } catch (e) {}
   }
   w.__onSystemTheme = function (night) { C.info.night = night; applyTheme(); if (st.tab === 'price' && st.priceMode === 'value') render(); };

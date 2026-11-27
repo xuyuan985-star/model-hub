@@ -6,12 +6,22 @@
   var C = w.Core, esc = C.esc;
   var $ = function (s, r) { return (r || document).querySelector(s); };
 
-  /** 收录项与已装项的关系：未装 / 已装 / 可更新 */
+  /** 收录项与已装项的关系：不兼容 / 未装 / 已装 / 可更新 */
   function status(entry) {
+    if (w.Mods.compat(entry)) return { k: 'incompat', label: '不兼容', cls: '' };
     var m = w.Mods.get(entry.id);
     if (!m) return { k: 'none', label: '下载', cls: 'main' };
     if (w.Mods.cmpVersion(entry.version, m.version) > 0) return { k: 'update', label: '更新', cls: 'main' };
     return { k: 'ok', label: '已安装', cls: '' };
+  }
+  /** 标题后的小标签：DEMO 仅供体验 */
+  function demoTag(x) { return x && x.demo ? ' <span class="mut" style="font-size:11px;border:1px solid currentColor;border-radius:4px;padding:0 4px">DEMO</span>' : ''; }
+  /** 适配范围文字：只写了 minApp 就是「x 及以上」，两端都写就是「x – y」，都没写是「不限」 */
+  function compatRange(x) {
+    if (x.minApp && x.maxApp) return x.minApp + ' – ' + x.maxApp;
+    if (x.minApp) return x.minApp + ' 及以上';
+    if (x.maxApp) return '最高 ' + x.maxApp;
+    return '不限';
   }
 
   /** 插件是否处于启用状态：主题看 enabledId，效果看 effectId */
@@ -89,9 +99,10 @@
       return catChips() + '<div class="list boxed">' + shown.map(function (e) {
         var s = status(e);
         var btn = s.k === 'ok' ? '<span class="mut" style="font-size:12px">已安装</span>'
+          : s.k === 'incompat' ? '<span class="mut" style="font-size:12px">不兼容</span>'
           : '<button class="btn sm ' + s.cls + '" data-dl="' + esc(e.id) + '">' + s.label + '</button>';
         return '<div class="row" data-detail="' + esc(e.id) + '" style="cursor:pointer">' +
-          '<div class="mid"><div class="nm"><span class="nt">' + esc(e.name) + '</span> <span class="mut" style="font-size:12px">v' + esc(e.version) + ' · ' + esc(catLabel(e)) + (e.author ? ' · ' + esc(e.author) : '') + '</span></div>' +
+          '<div class="mid"><div class="nm"><span class="nt">' + esc(e.name) + '</span>' + demoTag(e) + ' <span class="mut" style="font-size:12px">v' + esc(e.version) + ' · ' + esc(catLabel(e)) + (e.author ? ' · ' + esc(e.author) : '') + '</span></div>' +
           '<div class="sub">' + esc(e.description || '') + '</div></div>' + btn + '</div>';
       }).join('') + '</div><div class="btns" style="justify-content:center;margin-top:10px"><button class="btn sm" id="wsRef">刷新列表</button></div>';
     }
@@ -117,10 +128,12 @@
       var on = isActive(m);
       var rows = '<div class="kv"><span>分类</span><span>' + esc(w.Mods.CATEGORIES[catOf(info)]) + '</span></div>' +
         '<div class="kv"><span>版本</span><span>' + esc(info.version) + (m && entry && s.k === 'update' ? ' <span class="mut" style="font-size:12px">（已装 ' + esc(m.version) + '）</span>' : '') + '</span></div>' +
+        (entry ? '<div class="kv"><span>适配 App</span><span>' + esc(compatRange(entry)) + '</span></div>' : '') +
         (info.author ? '<div class="kv"><span>作者</span><span>' + esc(info.author) + '</span></div>' : '') +
-        '<div class="kv"><span>状态</span><span>' + (m ? (on ? '已安装 · 使用中' : '已安装') : '未安装') + '</span></div>';
+        '<div class="kv"><span>状态</span><span>' + (m ? (on ? '已安装 · 使用中' : '已安装') : (s.k === 'incompat' ? '不兼容当前 App' : '未安装')) + '</span></div>';
       var btns = '';
-      if (!m) btns += '<button class="btn main" id="dDl">下载安装</button>';
+      if (!m && s.k === 'incompat') btns += '<button class="btn" disabled>不兼容</button>';
+      else if (!m) btns += '<button class="btn main" id="dDl">下载安装</button>';
       if (m && s.k === 'update') btns += '<button class="btn main" id="dDl">更新到 ' + esc(entry.version) + '</button>';
       var kind = m ? m.type : '';
       var onLabel = kind === 'effect' ? '开启效果' : kind === 'pet' ? '开启宠物' : kind === 'background' ? '使用此背景' : '启用';
@@ -128,7 +141,7 @@
       if (m && !on) btns += '<button class="btn" id="dOn">' + onLabel + '</button>';
       if (m && on) btns += '<button class="btn" id="dOff">' + offLabel + '</button>';
       if (m) btns += '<button class="btn ghost" id="dRm">删除</button>';
-      return '<div class="card"><h3>' + esc(info.name) + '</h3><p>' + esc(info.description || '暂无简介') + '</p>' + rows +
+      return '<div class="card"><h3>' + esc(info.name) + demoTag(info) + '</h3><p>' + esc(info.description || '暂无简介') + '</p>' + rows +
         '<div class="btns">' + btns + '</div></div>';
     }
 

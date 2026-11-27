@@ -8,7 +8,8 @@
       "author": "model-hub",
       "description": "把朱印红换成海蓝色，浅色与深色模式都有适配。",
       "path": "plugins/ocean-blue/mod.json",
-      "category": "ui"
+      "category": "ui",
+      "minApp": "1.1.3"
     },
     {
       "id": "rose-ink",
@@ -17,7 +18,8 @@
       "author": "model-hub",
       "description": "朱印换成玫瑰红，偏暖的纸色，适合夜间阅读。",
       "path": "plugins/rose-ink/mod.json",
-      "category": "ui"
+      "category": "ui",
+      "minApp": "1.1.3"
     },
     {
       "id": "hall-podium",
@@ -26,25 +28,29 @@
       "author": "model-hub",
       "description": "榜单前三名加金、银、铜的殿堂式底纹与金属边框，第一名金，第二名银，第三名铜。",
       "path": "plugins/hall-podium/mod.json",
-      "category": "rank"
+      "category": "rank",
+      "minApp": "1.1.3"
     },
     {
       "id": "desktop-pet",
       "name": "桌宠",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "author": "model-hub",
-      "description": "屏幕上游走的鲸鱼娘桌宠，会待机、走路、被点击惊讶、被按住拖动，久不操作会睡着。",
+      "description": "屏幕底部水平走动的鲸鱼娘桌宠，会待机、走路、被点击惊讶、被按住拖动，久不操作会睡着。当前为 DEMO，仅供体验。",
       "category": "ui",
-      "path": "plugins/desktop-pet/mod.json"
+      "path": "plugins/desktop-pet/mod.json",
+      "minApp": "1.1.3",
+      "demo": true
     },
     {
       "id": "palace",
       "name": "宫殿",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": "model-hub",
       "description": "夜晚或白昼的宫殿舞厅背景，跟随深浅主题自动切换，列表与卡片改为透明底，只露出背景图。",
       "category": "ui",
-      "path": "plugins/palace/mod.json"
+      "path": "plugins/palace/mod.json",
+      "minApp": "1.1.3"
     }
   ]
 }

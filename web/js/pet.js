@@ -18,7 +18,6 @@
   var x = 0, y = 0, dx = 0.6, dy = 0.22;
   // 走位：从当前点缓动到目标点，到达后停顿一会儿，再选下一个边缘目标
   var tx = 0, ty = 0, walkFrom = { x: 0, y: 0 }, restUntil = 0;
-  var WALK_MS = 2600, REST_MIN_MS = 1200, REST_MAX_MS = 3200;
   var state = 'idle', set = null, lastAct = Date.now();
   var pressTimer = null, dragging = false, dragOffX = 0, dragOffY = 0;
 
@@ -63,42 +62,33 @@
   }
 
   // ---------- 游走 ----------
-  // 走位：一段一段进行。开始时记下起点与终点，之后只按真实经过的时间插值，
-  // 整段走完前不改目标，避免每帧重新选点造成回跳。
-  var WALK_SPEED_PX_PER_S = 70;   // 慢速：约每秒 70px，不会一闪而过
-  var segStart = 0, segDur = 0, lastT = 0;
-
-  function beginSegment(now) {
-    var W = window.innerWidth, H = window.innerHeight;
-    var left = Math.random() < 0.5;
-    walkFrom = { x: x, y: y };
-    tx = left ? 8 : W - SIZE - 8;
-    ty = 60 + Math.random() * Math.max(1, H - 260);
-    var dist = Math.sqrt(Math.pow(tx - walkFrom.x, 2) + Math.pow(ty - walkFrom.y, 2));
-    segDur = Math.max(800, dist / WALK_SPEED_PX_PER_S * 1000);   // 毫秒，按距离定时长
-    segStart = now;
-    dx = tx >= x ? 1 : -1;   // 朝向跟随移动方向
-  }
-
-  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }   // 缓入缓出
+  // 只沿屏幕底部一条水平线来回走：y 固定，每帧只按经过的时间加一小段 x，
+  // 碰到左右边缘就掉头。没有目标点，也就不存在回跳。
+  var WALK_SPEED_PX_PER_S = 60;   // 慢速
+  var WALK_MIN_MS = 3000, WALK_MAX_MS = 6000;   // 连续走多久后停一下
+  var REST_MIN_MS = 1200, REST_MAX_MS = 3000;   // 每次停顿时长
+  var lastFrame = 0, walkUntil = 0;
 
   function step() {
     if (dragging || state === 'sleep') return;
     var now = Date.now();
+    var dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;   // 单帧最多 100ms，防止切后台后跳一大步
+    lastFrame = now;
     if (now < restUntil) { setState('idle'); return; }   // 停顿中
-    if (segDur === 0) { beginSegment(now); }
-    var t = Math.min(1, (now - segStart) / segDur);
-    var e = ease(t);
-    x = walkFrom.x + (tx - walkFrom.x) * e;
-    y = walkFrom.y + (ty - walkFrom.y) * e;
-    setState('walk');
-    place();
-    if (t >= 1) {
-      // 走到了：停一小会儿，下一段从当前位置再开始
-      segDur = 0;
+    if (!walkUntil) walkUntil = now + WALK_MIN_MS + Math.random() * (WALK_MAX_MS - WALK_MIN_MS);
+    if (now >= walkUntil) {
+      // 停下来歇一会儿，然后换个时长继续走
+      walkUntil = 0;
       restUntil = now + REST_MIN_MS + Math.random() * (REST_MAX_MS - REST_MIN_MS);
       setState('idle');
+      return;
     }
+    x += dx * WALK_SPEED_PX_PER_S * dt;
+    var maxX = Math.max(0, window.innerWidth - SIZE);
+    if (x <= 0) { x = 0; dx = 1; }
+    else if (x >= maxX) { x = maxX; dx = -1; }
+    setState('walk');
+    place();
   }
 
   function onTap() {
