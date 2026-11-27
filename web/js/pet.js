@@ -17,7 +17,7 @@
   var el = null, timer = null, sleepTimer = null, surpriseTimer = null;
   var x = 0, y = 0, dx = 0.6, dy = 0.22;
   // 走位：从当前点缓动到目标点，到达后停顿一会儿，再选下一个边缘目标
-  var tx = 0, ty = 0, walkT = 0, walkFrom = { x: 0, y: 0 }, restUntil = 0;
+  var tx = 0, ty = 0, walkFrom = { x: 0, y: 0 }, restUntil = 0;
   var WALK_MS = 2600, REST_MIN_MS = 1200, REST_MAX_MS = 3200;
   var state = 'idle', set = null, lastAct = Date.now();
   var pressTimer = null, dragging = false, dragOffX = 0, dragOffY = 0;
@@ -63,14 +63,20 @@
   }
 
   // ---------- 游走 ----------
-  // 选下一个目标：贴着屏幕左右边缘之一，高度在可用区域内随机。避开顶部标题与底部导航。
-  function pickTarget() {
+  // 走位：一段一段进行。开始时记下起点与终点，之后只按真实经过的时间插值，
+  // 整段走完前不改目标，避免每帧重新选点造成回跳。
+  var WALK_SPEED_PX_PER_S = 70;   // 慢速：约每秒 70px，不会一闪而过
+  var segStart = 0, segDur = 0, lastT = 0;
+
+  function beginSegment(now) {
     var W = window.innerWidth, H = window.innerHeight;
     var left = Math.random() < 0.5;
+    walkFrom = { x: x, y: y };
     tx = left ? 8 : W - SIZE - 8;
     ty = 60 + Math.random() * Math.max(1, H - 260);
-    walkFrom = { x: x, y: y };
-    walkT = 0;
+    var dist = Math.sqrt(Math.pow(tx - walkFrom.x, 2) + Math.pow(ty - walkFrom.y, 2));
+    segDur = Math.max(800, dist / WALK_SPEED_PX_PER_S * 1000);   // 毫秒，按距离定时长
+    segStart = now;
     dx = tx >= x ? 1 : -1;   // 朝向跟随移动方向
   }
 
@@ -80,20 +86,21 @@
     if (dragging || state === 'sleep') return;
     var now = Date.now();
     if (now < restUntil) { setState('idle'); return; }   // 停顿中
-    if (!tx && !ty || walkT >= 1) {
-      // 到达或首次：停一小会儿，再开始下一段走位
-      if (walkT >= 1) { restUntil = now + REST_MIN_MS + Math.random() * (REST_MAX_MS - REST_MIN_MS); walkT = 0; setState('idle'); return; }
-      pickTarget();
-    }
-    walkT = Math.min(1, walkT + 40 / WALK_MS);
-    var e = ease(walkT);
+    if (segDur === 0) { beginSegment(now); }
+    var t = Math.min(1, (now - segStart) / segDur);
+    var e = ease(t);
     x = walkFrom.x + (tx - walkFrom.x) * e;
     y = walkFrom.y + (ty - walkFrom.y) * e;
     setState('walk');
     place();
+    if (t >= 1) {
+      // 走到了：停一小会儿，下一段从当前位置再开始
+      segDur = 0;
+      restUntil = now + REST_MIN_MS + Math.random() * (REST_MAX_MS - REST_MIN_MS);
+      setState('idle');
+    }
   }
 
-  // ---------- 交互 ----------
   function onTap() {
     if (dragging) return;
     lastAct = Date.now();
@@ -141,7 +148,6 @@
     place();
   }
 
-  // ---------- 睡觉计时 ----------
   function tickSleep() {
     if (dragging) return;
     if (state !== 'sleep' && Date.now() - lastAct > IDLE_TO_SLEEP) setState('sleep');
@@ -150,7 +156,7 @@
   function start() {
     stop();
     if (reduced()) { setState('idle'); return; }
-    timer = setInterval(step, 40);
+    timer = setInterval(step, 33);
     sleepTimer = setInterval(tickSleep, 2000);
   }
 
