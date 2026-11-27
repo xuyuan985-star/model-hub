@@ -35,11 +35,12 @@
     return !!owLookup()[norm(m.releaseName || m.name)];
   };
 
-  // 范围筛选：all 全部 / open 开源 / cn 国产
-  F.SCOPES = [['all', '全部'], ['open', '开源'], ['cn', '国产']];
+  // 范围筛选：全部 / 中国模型 / 海外（美国等）模型
+  F.SCOPES = [['all', '全部'], ['cn', '中国'], ['intl', '海外']];
   F.scopeOk = function (m, scope) {
-    if (scope === 'open') return F.isOpen(m);
-    if (scope === 'cn') return F.isCN(m.creatorName || m.creator);
+    var name = m.creatorName || m.creator;
+    if (scope === 'cn') return F.isCN(name);
+    if (scope === 'intl') return !F.isCN(name);
     return true;
   };
   /** 范围切换小分段的 HTML；only 可限定只出现哪几项（如供应商榜没有开源信息） */
