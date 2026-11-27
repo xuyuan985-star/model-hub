@@ -33,18 +33,36 @@
     var page = A.page, st = A.st, toast = A.toast, openSheet = A.openSheet, closeSheet = A.closeSheet;
     var render = A.render, debounce = A.debounce, pickDlg = A.pickDlg, setCalcMode = A.setCalcMode;
 
+    /**
+     * 只在用户自己加进「自选」的模型里挑。自选存的是 AA 榜单的模型名，
+     * 这里到价格表里按名称匹配出对应报价；匹配不到的不列出。
+     */
     function modelOptions() {
+      var favs = (C.settings && C.settings.favorites) || [];
+      if (!favs.length) return [];
       var d = C.sources.prices && C.sources.prices.data;
-      var out = [];
-      if (d) {
-        Object.keys(d.providers).forEach(function (pid) {
-          var p = d.providers[pid];
-          (p.models || []).forEach(function (m) {
-            if (m.i == null && m.o == null) return;
-            out.push({ id: pid + '|' + m.id, name: m.n, prov: p.name, i: m.i || 0, o: m.o || 0 });
-          });
+      if (!d) return [];
+      var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+      var want = {};
+      favs.forEach(function (f) { want[norm(f)] = f; });
+      var out = [], seenFav = {};
+      Object.keys(d.providers).forEach(function (pid) {
+        var p = d.providers[pid];
+        (p.models || []).forEach(function (m) {
+          if (m.i == null && m.o == null) return;
+          var k = norm(m.n) || norm(m.id);
+          var hit = want[k];
+          // 名称不完全一致时，允许「自选名包含在报价名里」的宽松匹配
+          if (!hit) {
+            Object.keys(want).forEach(function (w) {
+              if (!hit && w.length >= 4 && (k.indexOf(w) >= 0 || w.indexOf(k) >= 0)) hit = want[w];
+            });
+          }
+          if (!hit || seenFav[hit]) return;
+          seenFav[hit] = 1;
+          out.push({ id: 'fav|' + hit, name: hit, prov: p.name, i: m.i || 0, o: m.o || 0 });
         });
-      }
+      });
       return out;
     }
 
@@ -53,8 +71,9 @@
       var tc = st.tc;
       var est = T.estimate(tc.text);
       var opts = modelOptions();
-      if (!tc.modelId && opts.length) tc.modelId = opts[0].id;
-      var pick = opts.filter(function (o) { return o.id === tc.modelId; })[0] || opts[0];
+      var hasFav = opts.length > 0;
+      if (hasFav && !opts.some(function (o) { return o.id === tc.modelId; })) tc.modelId = opts[0].id;
+      var pick = opts.filter(function (o) { return o.id === tc.modelId; })[0] || null;
 
       // 单次请求成本 = 输入 token × 输入价 + 输出 token × 输出价
       var inTok = est.tokens, outTok = Math.round(est.tokens * (tc.outM / Math.max(0.01, tc.inM)));
@@ -77,9 +96,11 @@
 
       html += '<div class="sec" style="padding-left:16px">按哪个模型计价</div><div class="card">' +
         (pick
-          ? '<div class="kv"><span>模型</span><button class="sel" id="tcPick">' + esc(pick.name) + '</button></div>' +
+          ? '<div class="kv"><span>模型（来自自选）</span><button class="sel" id="tcPick">' + esc(pick.name) + '</button></div>' +
             '<div class="kv"><span>输入 / 输出价</span><span>' + C.money(pick.i) + ' / ' + C.money(pick.o) + ' 每百万字</span></div>'
-          : '<p class="mut" style="margin:0">价格表还没加载好，稍后再试。</p>') +
+          : (hasFav === false && !((C.settings && C.settings.favorites) || []).length
+              ? '<p class="mut" style="margin:0 0 8px">还没有自选模型。先在榜单里长按或点开模型「加入自选」，这里就能按自选模型计价。</p>'
+              : '<p class="mut" style="margin:0 0 8px">自选的模型暂时在价格表里没找到对应报价，换一个试试。</p>')) +
         '<div class="kv"><span>输入 : 输出 比例</span><span><input id="tcIn" type="number" step="0.1" class="inline-num sm" value="' + tc.inM + '"> : <input id="tcOut" type="number" step="0.1" class="inline-num sm" value="' + tc.outM + '"></span></div>' +
         '<div class="kv"><span>预计调用次数（次/月）</span><input id="tcReqs" type="number" step="100" class="inline-num" value="' + tc.reqs + '"></div>' +
         '</div>';
@@ -108,9 +129,8 @@
         var t2 = $('#tcText'); if (t2) { t2.focus(); t2.setSelectionRange(pos, pos); }
       }, 400));
       if ($('#tcPick')) $('#tcPick').onclick = function () {
-        // 只列主流常用的最多 300 条，避免弹出超长列表
-        var list = opts.slice(0, 300).map(function (o) { return [o.id, o.name, o.prov + ' · ' + C.money(o.i) + ' / ' + C.money(o.o)]; });
-        pickDlg('选择计价模型', list, tc.modelId, function (v) { tc.modelId = v; render(); });
+        var list = opts.map(function (o) { return [o.id, o.name, o.prov + ' · ' + C.money(o.i) + ' / ' + C.money(o.o)]; });
+        pickDlg('自选模型（' + list.length + '）', list, tc.modelId, function (v) { tc.modelId = v; render(); });
       };
       ['tcIn', 'tcOut', 'tcReqs'].forEach(function (id) {
         var el = $('#' + id); if (!el) return;
