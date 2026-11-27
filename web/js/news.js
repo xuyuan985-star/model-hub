@@ -22,6 +22,24 @@
     }
     return t.replace(/```[\s\S]*?```/g, ' ').replace(/<[^>]+>/g, ' ').replace(/<[^>]*$/g, '').replace(/\s+/g, ' ').trim();
   }
+
+  /** 详情页正文：用 markdown-it 渲染 + DOMPurify 净化；库不可用时退回纯文本段落。 */
+  var md = null, mdTried = false;
+  function mdToHtml(s) {
+    if (!mdTried) {
+      mdTried = true;
+      try { if (w.markdownit) md = w.markdownit({ html: false, linkify: true, breaks: true }); } catch (e) { md = null; }
+    }
+    var text = String(s || '');
+    if (!text) return '';
+    if (md && w.DOMPurify) {
+      try {
+        return w.DOMPurify.sanitize(md.render(text), { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'blockquote'], ALLOWED_ATTR: ['href'] });
+      } catch (e) { /* 退回纯文本 */ }
+    }
+    return '<p>' + esc(cleanText(text)) + '</p>';
+  }
+  NS.mdToHtml = mdToHtml;
   function decodeXml(s) { return cleanText(s); }
   function tagText(block, tag) {
     var m = block.match(new RegExp('<' + tag + '(?:\\s[^>]*)?>([\\s\\S]*?)<\\/' + tag + '>', 'i'));
@@ -237,7 +255,7 @@
         var ct = cleanText(x.title), cs = cleanText(x.summary);
         openSheet('<h2>' + esc(ct) + '</h2>' +
           '<p class="mut" style="margin:-4px 0 10px;font-size:12.5px">' + esc(x.src || catLabel(x.cat)) + (x.at ? ' · ' + C.ago(x.at) : '') + '</p>' +
-          '<p style="margin:0 0 14px;line-height:1.65;color:var(--ink)">' + esc(cs || '暂无更多摘要，点下方按钮阅读原文。') + '</p>' +
+          '<p style="margin:0 0 14px;line-height:1.65;color:var(--ink)">' + (cs ? mdToHtml(cs) : '暂无更多摘要，点下方按钮阅读原文。') + '</p>' +
           '<div class="btns">' +
           (x.url ? '<button class="btn main" id="nOpen">阅读原文</button><button class="btn" id="nCopy">复制链接</button>' : '') +
           '<button class="btn" id="cl">关闭</button></div>', function () {

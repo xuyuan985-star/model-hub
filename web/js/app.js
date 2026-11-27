@@ -231,7 +231,7 @@
   $('#tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) go(b.getAttribute('data-tab')); });
 
   function updateSrc() {
-    var rkId = st.rankMode === 'prov' ? 'aa_providers' : st.rankMode === 't2i' ? 'aa_t2i' : st.rankMode === 't2v' ? 'aa_t2v' : 'aa';
+    var rkId = st.rankMode === 'prov' ? 'aa_providers' : st.rankMode === 't2i' ? 'aa_t2i' : st.rankMode === 't2v' ? 'aa_t2v' : st.rankMode === 'cn' ? 'cn_bench' : 'aa';
     var ids = { rank: [rkId], price: (st.priceMode === 'value' || st.priceMode === 'calc') ? ['aa', 'prices'] : ['prices', 'fx'], usage: [], more: ['aa', 'prices', 'fx'], thanks: [], news: ['news'] }[st.tab];
     var all = Object.keys(C.sources).map(function (k) { return C.sources[k]; });
     var rel = ids.length ? ids.map(function (k) { return C.sources[k]; }).filter(Boolean) : all;
@@ -451,7 +451,8 @@
   }
 
   VIEWS.rank = function () {
-    var topSeg = subMod.segHtml([['llm', '大语言'], ['prov', '供应商速度'], ['t2i', '生图'], ['t2v', '视频']], st.rankMode, 'data-rm');
+    var topSeg = subMod.segHtml([['llm', '大语言'], ['cn', '中文评测'], ['prov', '供应商速度'], ['t2i', '生图'], ['t2v', '视频']], st.rankMode, 'data-rm');
+    if (st.rankMode === 'cn' && w.CnBench) return VIEWS.cn(topSeg);
     if (st.rankMode === 'prov') return subMod.viewProviders(topSeg);
     if (st.rankMode === 't2i' || st.rankMode === 't2v') return subMod.viewMedia(topSeg, st.rankMode);
     var aa = C.sources.aa.data;
@@ -583,11 +584,12 @@
   }
 
   VIEWS.price = function () {
-    var topSeg = subMod.segHtml([['prov', '按平台'], ['cmp', '比价'], ['plans', '套餐'], ['value', '性价比'], ['calc', '算账']], st.priceMode, 'data-pm');
+    var topSeg = subMod.segHtml([['prov', '按平台'], ['cmp', '比价'], ['plans', '套餐'], ['value', '性价比'], ['calc', '算账'], ['token', 'Token']], st.priceMode, 'data-pm');
     if (st.priceMode === 'cmp') return subMod.viewPriceCompare(topSeg);
     if (st.priceMode === 'plans') return subMod.viewPlans(topSeg);
     if (st.priceMode === 'value') return viewValue(topSeg);
     if (st.priceMode === 'calc') return subMod.viewCalc(topSeg);
+    if (st.priceMode === 'token' && w.TokenCalc) return VIEWS.token(topSeg);
     var d = C.sources.prices.data;
     if (!d) { page.innerHTML = topSeg + empty('正在获取价格', ''); subMod.bindSeg('.seg', 'data-pm', 'priceMode'); return; }
     var pins = C.settings.pinned.filter(function (id) { return d.providers[id]; });
@@ -690,6 +692,8 @@
   moreMod.setUpdateDlg(updateDlg);
   VIEWS.usage = moreMod.usage; VIEWS.more = moreMod.more; VIEWS.thanks = moreMod.thanks;
   if (w.News) VIEWS.news = w.News.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, debounce: debounce, go: go });
+  if (w.CnBench) VIEWS.cn = w.CnBench.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, render: render, debounce: debounce });
+  if (w.TokenCalc) VIEWS.token = w.TokenCalc.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, render: render, debounce: debounce, pickDlg: pickDlg });
 
   applyTheme();
   go('rank');

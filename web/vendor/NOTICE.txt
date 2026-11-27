@@ -1,0 +1,5 @@
+第三方库（均以原样内置，未修改源码）
+
+markdown-it 14.3.3 — MIT — https://github.com/markdown-it/markdown-it
+DOMPurify 3.5.0 — Apache-2.0 / MPL-2.0 — https://github.com/cure53/DOMPurify
+dayjs 1.11.x — MIT — https://github.com/iamkun/dayjs

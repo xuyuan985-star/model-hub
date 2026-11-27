@@ -21,7 +21,7 @@
     if (b) b.onclick = function () { resetLimit(); key(); render(); };
   }
   function segHtml(items, cur, attr) {
-    return '<div class="seg-wrap"><div class="seg">' + items.map(function (it) {
+    return '<div class="seg-wrap' + (items.length >= 5 ? ' five' : '') + '"><div class="seg">' + items.map(function (it) {
       return '<button class="' + (it[0] === cur ? 'on' : '') + '" ' + attr + '="' + it[0] + '">' + esc(it[1]) + '</button>';
     }).join('') + '</div></div>';
   }

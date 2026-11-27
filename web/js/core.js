@@ -135,6 +135,23 @@
     if (d < 60) return '刚刚'; if (d < 3600) return Math.floor(d / 60) + ' 分钟前';
     if (d < 86400) return Math.floor(d / 3600) + ' 小时前'; return Math.floor(d / 86400) + ' 天前';
   };
+  /** 精确时间：内置 dayjs 可用时用相对时间插件，否则回退到上面的手写版本。 */
+  core.agoAt = function (t) {
+    try {
+      if (w.dayjs) {
+        var d = w.dayjs(t), lib = w.dayjs;
+        if (lib.extend && lib.relativeTime) { /* 插件未打包时跳过 */ }
+        return d.fromNow ? d.fromNow() : core.ago(t);
+      }
+    } catch (e) {}
+    return core.ago(t);
+  };
+  /** 格式化成「2026-11-27 09:30」 */
+  core.fmtTime = function (t, fmt) {
+    try { if (w.dayjs) return w.dayjs(t).format(fmt || 'YYYY-MM-DD HH:mm'); } catch (e) {}
+    var d = new Date(t), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  };
   core.esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   core.uid = function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); };
 
