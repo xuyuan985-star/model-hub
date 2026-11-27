@@ -279,60 +279,65 @@
       };
     }
 
-    // ---------- 5) 性价比子视图：预算选型 / 算账向导 ----------
+    // ---------- 5) 算费用：两页签，一页按量算账、一页按文本估 token ----------
+    var calcMode = 'plan';
+    var tokenView = null;
+
     function viewCalc(topSeg) {
+      if (calcMode === 'token' && tokenView) { tokenView(topSeg); return; }
       var aa = C.sources.aa.data;
-      if (!aa) { page.innerHTML = topSeg + '<div class="empty"><b>正在加载榜单数据</b></div>'; bindSeg('.seg', 'data-pm', 'priceMode'); return; }
       var cs = st.calc || { scene: 'code', budgetUsd: 10, inM: 30, outM: 3, cache: 65 };
       st.calc = cs;
       var cny = C.settings.currency === 'CNY', fx = C.fxRate();
-      var res = K.recommend(aa, { budgetUsd: cs.budgetUsd, inM: cs.inM, outM: cs.outM, cache: cs.cache / 100 });
+      var res = aa ? K.recommend(aa, { budgetUsd: cs.budgetUsd, inM: cs.inM, outM: cs.outM, cache: cs.cache / 100 }) : { fit: [], stretch: [], planTips: [] };
 
       var html = topSeg +
-        '<div class="chips">' + K.SCENES.map(function (sc) {
+        '<div class="chips">' + [['plan', '按用量算'], ['token', '按文本算']].map(function (x) {
+          return '<button class="chip' + (calcMode === x[0] ? ' on' : '') + '" data-cm="' + x[0] + '">' + x[1] + '</button>';
+        }).join('') + '</div>' +
+        '<div class="chips" style="padding-top:0">' + K.SCENES.map(function (sc) {
           return '<button class="chip' + (cs.scene === sc.id ? ' on' : '') + '" data-sc="' + sc.id + '">' + esc(sc.name) + '</button>';
         }).join('') + '</div>' +
         '<div class="card">' +
-        '<div class="kv"><span>每月预算（' + (cny ? '人民币 ¥' : '美元 $') + '）</span>' +
-        '<input id="cbud" type="number" step="1" class="inline-num" value="' + Math.round(cny ? cs.budgetUsd * fx : cs.budgetUsd) + '"></div>' +
-        '<div class="kv"><span>月输入 / 输出（百万字）</span>' +
-        '<span><input id="cin" type="number" step="1" class="inline-num sm" value="' + cs.inM + '"> / <input id="cout" type="number" step="0.5" class="inline-num sm" value="' + cs.outM + '"></span></div>' +
-        '<div class="kv"><span>缓存命中率</span>' +
-        '<select class="inline" id="ccache">' + [0, 25, 50, 65, 80].map(function (v) { return '<option value="' + v + '"' + (cs.cache === v ? ' selected' : '') + '>' + v + '%</option>'; }).join('') + '</select></div>' +
+        '<div class="kv"><span>每月预算</span><span><input id="cbud" type="number" step="1" class="inline-num" value="' + Math.round(cny ? cs.budgetUsd * fx : cs.budgetUsd) + '"> <span class="mut" style="font-family:var(--sans);font-size:12px">' + (cny ? '元' : '美元') + '</span></span></div>' +
+        '<div class="kv"><span>月用量（百万 tokens）</span><span>入 <input id="cin" type="number" step="1" class="inline-num sm" value="' + cs.inM + '"> 出 <input id="cout" type="number" step="0.5" class="inline-num sm" value="' + cs.outM + '"></span></div>' +
         '</div>';
 
-      html += '<div class="sec">预算内最聪明的模型（按量直连）</div>';
-      if (res.fit.length) {
-        html += '<div class="list">' + res.fit.map(function (r, i) {
+      if (!aa) {
+        html += '<div class="empty"><b>正在加载榜单数据</b></div>';
+      } else if (res.fit.length) {
+        html += '<div class="sec">预算内最聪明</div><div class="list">' + res.fit.slice(0, 5).map(function (r, i) {
           var save = r.noCache > r.cost + 0.05 ? ' · 缓存省 ' + C.money(r.noCache - r.cost) : '';
           return '<button class="row" data-fi="' + i + '">' + seal(i + 1) +
             '<div class="mid"><div class="nm">' + logo(r.m.creatorName) + '<span class="nt">' + esc(r.m.releaseName || r.m.name) + '</span></div>' +
             '<div class="sub">智能 ' + fmtNum(r.ii, 1) + save + '</div></div>' +
             '<div class="val">' + C.money(r.cost) + '<small>预估/月</small></div></button>';
         }).join('') + '</div>';
+        if (res.stretch.length) {
+          html += '<div class="sec">加预算可升级</div><div class="list boxed">' + res.stretch.slice(0, 2).map(function (r, i) {
+            return '<button class="row" style="min-height:52px" data-si="' + i + '"><div class="mid"><div class="nm"><span class="nt">' + esc(r.m.releaseName || r.m.name) + '</span></div>' +
+              '<div class="sub">智能 ' + fmtNum(r.ii, 1) + '</div></div><div class="val">' + C.money(r.cost) + '<small>/月</small></div></button>';
+          }).join('') + '</div>';
+        }
+        if (res.planTips.length) {
+          html += '<div class="sec">同预算的包月</div><div class="list boxed">' + res.planTips.slice(0, 2).map(function (p) {
+            return '<div class="row" style="min-height:50px"><div class="mid"><div class="nm"><span class="nt">' + esc(p.grp + ' · ' + p.name) + '</span></div>' +
+              '<div class="sub">含约 ' + C.money(p.credit, 0) + ' 额度</div></div><div class="val">' + C.money(p.usd, 0) + '<small>/月</small></div></div>';
+          }).join('') + '</div>';
+        }
       } else {
-        html += '<div class="card"><p class="mut" style="margin:0">这个预算下按量直连较紧张，建议提高预算、调高缓存命中率，或看下方包月方案。</p></div>';
+        html += '<div class="card"><p class="mut" style="margin:0">这个预算下按量直连比较紧张，试试提高预算或换个场景。</p></div>';
       }
-
-      if (res.planTips.length) {
-        html += '<div class="sec">同预算更值的包月方案</div><div class="list boxed">' + res.planTips.map(function (p) {
-          return '<div class="row" style="min-height:54px"><div class="mid"><div class="nm"><span class="nt">' + esc(p.grp + ' · ' + p.name) + '</span></div>' +
-            '<div class="sub">含约 ' + C.money(p.credit, 0) + ' 额度 · ' + (p.api ? '支持 API' : '仅客户端') + '</div></div>' +
-            '<div class="val">' + C.money(p.usd, 0) + '<small>/月</small></div></div>';
-        }).join('') + '</div>';
-      }
-
-      if (res.stretch.length) {
-        html += '<div class="sec">加一点预算可升级</div><div class="list">' + res.stretch.map(function (r, i) {
-          return '<button class="row" data-si="' + i + '"><div class="mid"><div class="nm">' + logo(r.m.creatorName) + '<span class="nt">' + esc(r.m.releaseName || r.m.name) + '</span></div>' +
-            '<div class="sub">智能 ' + fmtNum(r.ii, 1) + '</div></div>' +
-            '<div class="val">' + C.money(r.cost) + '<small>预估/月</small></div></button>';
-        }).join('') + '</div>';
-      }
+      html += '<p class="foot">按官方报价与缓存命中率估算，实际以各家计费为准 · 切换「按文本算」可直接粘文本算 token</p>';
 
       page.innerHTML = html;
       bindSeg('.seg', 'data-pm', 'priceMode');
-      page.querySelector('.chips').addEventListener('click', function (e) {
+      page.querySelectorAll('.chips')[0].addEventListener('click', function (e) {
+        var b = e.target.closest('[data-cm]'); if (!b) return;
+        calcMode = b.getAttribute('data-cm'); render();
+      });
+      var sc1 = page.querySelectorAll('.chips')[1];
+      if (sc1) sc1.addEventListener('click', function (e) {
         var b = e.target.closest('[data-sc]'); if (!b) return;
         var sc = K.SCENES.filter(function (x) { return x.id === b.getAttribute('data-sc'); })[0];
         if (sc) { cs.scene = sc.id; cs.inM = sc.inM; cs.outM = sc.outM; cs.cache = Math.round(sc.cache * 100); render(); }
@@ -344,12 +349,11 @@
         render();
       }, 450);
       $('#cbud').oninput = applyInp; $('#cin').oninput = applyInp; $('#cout').oninput = applyInp;
-      $('#ccache').onchange = function (e) { cs.cache = +e.target.value; render(); };
-      page.addEventListener('click', function (e) {
+      page.onclick = function (e) {
         var fb = e.target.closest('[data-fi]'), sb = e.target.closest('[data-si]');
-        if (fb) modelSheet(res.fit[+fb.getAttribute('data-fi')].m);
-        if (sb) modelSheet(res.stretch[+sb.getAttribute('data-si')].m);
-      });
+        if (fb && res.fit[+fb.getAttribute('data-fi')]) modelSheet(res.fit[+fb.getAttribute('data-fi')].m);
+        if (sb && res.stretch[+sb.getAttribute('data-si')]) modelSheet(res.stretch[+sb.getAttribute('data-si')].m);
+      };
     }
 
     return {
@@ -359,7 +363,9 @@
       viewMedia: viewMedia,
       viewPriceCompare: viewPriceCompare,
       viewPlans: viewPlans,
-      viewCalc: viewCalc
+      viewCalc: viewCalc,
+      setTokenView: function (fn) { tokenView = fn; },
+      setCalcMode: function (m) { calcMode = m; }
     };
   };
 })(window);

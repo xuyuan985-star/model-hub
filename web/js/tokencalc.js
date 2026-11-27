@@ -31,7 +31,7 @@
 
   T.registerView = function (A) {
     var page = A.page, st = A.st, toast = A.toast, openSheet = A.openSheet, closeSheet = A.closeSheet;
-    var render = A.render, debounce = A.debounce, pickDlg = A.pickDlg;
+    var render = A.render, debounce = A.debounce, pickDlg = A.pickDlg, setCalcMode = A.setCalcMode;
 
     function modelOptions() {
       var d = C.sources.prices && C.sources.prices.data;
@@ -48,7 +48,7 @@
       return out;
     }
 
-    function view() {
+    function view(topSeg) {
       if (!st.tc) st.tc = { text: '', inM: 1, outM: 0.3, reqs: 1000, modelId: '' };
       var tc = st.tc;
       var est = T.estimate(tc.text);
@@ -61,8 +61,12 @@
       var oneCost = pick ? (inTok / 1e6 * pick.i + outTok / 1e6 * pick.o) : 0;
       var monthCost = oneCost * (tc.reqs || 0);
 
-      var html = '<div class="card">' +
-        '<p class="mut" style="margin:0 0 8px;font-size:12.5px">粘贴或输入要处理的文本，估算 token 数与调用成本。没有联网也能算。</p>' +
+      var html = (topSeg || '') +
+        '<div class="chips">' + [['plan', '按用量算'], ['token', '按文本算']].map(function (x) {
+          return '<button class="chip' + (x[0] === 'token' ? ' on' : '') + '" data-cm="' + x[0] + '">' + x[1] + '</button>';
+        }).join('') + '</div>' +
+        '<div class="card">' +
+        '<p class="mut" style="margin:0 0 8px;font-size:12.5px">粘贴要处理的文本，估算 token 数与成本。只在本机计算，不上传。</p>' +
         '<div class="chips" style="padding:0 0 8px">' + T.SAMPLES.map(function (s) {
           return '<button class="chip" data-tc="' + s[0] + '">' + esc(s[1]) + '</button>';
         }).join('') + '</div>' +
@@ -89,7 +93,10 @@
       html += '<p class="foot">Token 数按中文 1 字≈1 token、英文 4 字母≈1 token 估算，与真实分词器可能有 ±10~15% 偏差。</p>';
       page.innerHTML = html;
 
-      page.querySelector('.chips').addEventListener('click', function (e) {
+      var tabRow = page.querySelector('.chips');
+      if (tabRow) tabRow.addEventListener('click', function (e) {
+        var cm = e.target.closest('[data-cm]');
+        if (cm && cm.getAttribute('data-cm') === 'plan') { st.priceMode = 'calc'; if (setCalcMode) setCalcMode('plan'); render(); return; }
         var b = e.target.closest('[data-tc]'); if (!b) return;
         var s = T.SAMPLES.filter(function (x) { return x[0] === b.getAttribute('data-tc'); })[0];
         if (s) { tc.text = s[2]; render(); }

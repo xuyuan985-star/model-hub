@@ -82,7 +82,17 @@
       };
     });
   }
-  w.__onBack = function () { if (dlgOpen) { closeDlg(); return true; } if (sheetOpen) { closeSheet(); return true; } if (st.tab === 'thanks') { go('more'); return true; } if (st.tab !== 'rank') { go('rank'); return true; } return false; };
+  w.__onBack = function () {
+    if (dlgOpen) { closeDlg(); return true; }
+    if (sheetOpen) { closeSheet(); return true; }
+    if (st.tab === 'thanks') { go('more'); return true; }
+    // 榜单页的各个子榜（中文评测/生图/视频）先退回「大语言」，再按一次才离开榜单页
+    if (st.tab === 'rank' && st.rankMode !== 'llm') { st.rankMode = 'llm'; render(); return true; }
+    // 价格页的子页同理退回「按平台」
+    if (st.tab === 'price' && st.priceMode !== 'prov') { st.priceMode = 'prov'; render(); return true; }
+    if (st.tab !== 'rank') { go('rank'); return true; }
+    return false;
+  };
 
   // ---------- 模型对比（最多 4 个） ----------
   var cmpKeys = [], CMP_MAX = 4;
@@ -451,8 +461,9 @@
   }
 
   VIEWS.rank = function () {
-    var topSeg = subMod.segHtml([['llm', '大语言'], ['cn', '中文评测'], ['prov', '供应商速度'], ['t2i', '生图'], ['t2v', '视频']], st.rankMode, 'data-rm');
+    var topSeg = subMod.segHtml([['llm', '大语言'], ['cn', '中文评测'], ['value', '性价比'], ['t2i', '生图'], ['t2v', '视频']], st.rankMode, 'data-rm');
     if (st.rankMode === 'cn' && w.CnBench) return VIEWS.cn(topSeg);
+    if (st.rankMode === 'value') return viewValue(topSeg);
     if (st.rankMode === 'prov') return subMod.viewProviders(topSeg);
     if (st.rankMode === 't2i' || st.rankMode === 't2v') return subMod.viewMedia(topSeg, st.rankMode);
     var aa = C.sources.aa.data;
@@ -584,12 +595,11 @@
   }
 
   VIEWS.price = function () {
-    var topSeg = subMod.segHtml([['prov', '按平台'], ['cmp', '比价'], ['plans', '套餐'], ['value', '性价比'], ['calc', '算账'], ['token', 'Token']], st.priceMode, 'data-pm');
+    var topSeg = subMod.segHtml([['prov', '按平台'], ['cmp', '比价'], ['plans', '套餐'], ['calc', '算费用']], st.priceMode, 'data-pm');
     if (st.priceMode === 'cmp') return subMod.viewPriceCompare(topSeg);
     if (st.priceMode === 'plans') return subMod.viewPlans(topSeg);
-    if (st.priceMode === 'value') return viewValue(topSeg);
+    if (st.priceMode === 'value') { st.priceMode = 'prov'; }
     if (st.priceMode === 'calc') return subMod.viewCalc(topSeg);
-    if (st.priceMode === 'token' && w.TokenCalc) return VIEWS.token(topSeg);
     var d = C.sources.prices.data;
     if (!d) { page.innerHTML = topSeg + empty('正在获取价格', ''); subMod.bindSeg('.seg', 'data-pm', 'priceMode'); return; }
     var pins = C.settings.pinned.filter(function (id) { return d.providers[id]; });
@@ -632,7 +642,7 @@
   // ================= 性价比（并入价格页的「性价比」子页） =================
   function viewValue(topSeg) {
     var aa = C.sources.aa.data;
-    if (!aa) { page.innerHTML = topSeg + empty('正在获取榜单', ''); subMod.bindSeg('.seg', 'data-pm', 'priceMode'); return; }
+    if (!aa) { page.innerHTML = topSeg + empty('正在获取榜单', ''); subMod.bindSeg('.seg', 'data-rm', 'rankMode'); return; }
     var pts = dedupeVariants(aa.models).filter(function (m) { var p = blendPrice(m); return m.intelligenceIndex != null && p > 0; });
     var fr = N.frontier(pts.map(function (m) { return { x: blendPrice(m), y: m.intelligenceIndex, m: m }; }));
     var frSet = {}; fr.forEach(function (p) { frSet[p.m.id] = 1; });
@@ -661,7 +671,7 @@
     if (rows.length > vShown.length) html += '<div class="morewrap"><button class="btn sm" id="moreVal">再看 ' + Math.min(40, rows.length - vShown.length) + ' 个</button></div>';
     html += '<p class="foot">' + rows.length + ' 个官方报价模型 · 长按可加入对比</p>';
     page.innerHTML = html;
-    subMod.bindSeg('.seg', 'data-pm', 'priceMode');
+    subMod.bindSeg('.seg', 'data-rm', 'rankMode');
 
     $('#vq').addEventListener('input', debounce(function (e) { st.vq = e.target.value; st.rankLimit = 60; var pos = e.target.selectionStart; render(); var q = $('#vq'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 250));
     var clrVq = page.querySelector('[data-clr="vq"]'); if (clrVq) clrVq.onclick = function () { st.vq = ''; st.rankLimit = 60; render(); };
@@ -693,7 +703,10 @@
   VIEWS.usage = moreMod.usage; VIEWS.more = moreMod.more; VIEWS.thanks = moreMod.thanks;
   if (w.News) VIEWS.news = w.News.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, confirmSheet: confirmSheet, render: render, debounce: debounce, go: go });
   if (w.CnBench) VIEWS.cn = w.CnBench.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, render: render, debounce: debounce });
-  if (w.TokenCalc) VIEWS.token = w.TokenCalc.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, render: render, debounce: debounce, pickDlg: pickDlg });
+  if (w.TokenCalc) {
+    VIEWS.token = w.TokenCalc.registerView({ page: page, st: st, toast: toast, openSheet: openSheet, closeSheet: closeSheet, render: render, debounce: debounce, pickDlg: pickDlg, setCalcMode: subMod.setCalcMode });
+    subMod.setTokenView(VIEWS.token);
+  }
 
   applyTheme();
   go('rank');
