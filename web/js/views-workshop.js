@@ -37,9 +37,18 @@
   w.registerWorkshopView = function (A) {
     var page = A.page, toast = A.toast, openSheet = A.openSheet, closeSheet = A.closeSheet;
     var confirmSheet = A.confirmSheet, render = A.render, go = A.go;
-    var st = { seg: 'list', detail: null }; // detail: 收录项 id
+    var st = { seg: 'list', detail: null, cat: 'all' }; // detail: 收录项 id；cat: 分类筛选，all 为全部
 
     function entries() { return w.Workshop.cached ? w.Workshop.cached() : []; }
+    function catOf(x) { return (x && w.Mods.CATEGORIES[x.category]) ? x.category : 'ui'; }
+    function catLabel(x) { return w.Mods.CATEGORIES[catOf(x)]; }
+    function catChips() {
+      var keys = ['all'].concat(Object.keys(w.Mods.CATEGORIES));
+      return '<div class="chips">' + keys.map(function (k) {
+        var label = k === 'all' ? '全部' : w.Mods.CATEGORIES[k];
+        return '<button class="chip' + (st.cat === k ? ' on' : '') + '" data-cat="' + k + '">' + label + '</button>';
+      }).join('') + '</div>';
+    }
     function findEntry(id) { return entries().filter(function (e) { return e.id === id; })[0] || null; }
 
     // ---------- 动作 ----------
@@ -70,12 +79,14 @@
           (w.Workshop.error ? '<p>' + esc(w.Workshop.error) + '</p>' : '') + '</div>' +
           '<div class="btns" style="justify-content:center"><button class="btn sm" id="wsRef">刷新列表</button></div>';
       }
-      return '<div class="list boxed">' + list.map(function (e) {
+      var shown = st.cat === 'all' ? list : list.filter(function (e) { return catOf(e) === st.cat; });
+      if (!shown.length) return catChips() + '<div class="empty"><b>这个分类下还没有插件</b></div>';
+      return catChips() + '<div class="list boxed">' + shown.map(function (e) {
         var s = status(e);
         var btn = s.k === 'ok' ? '<span class="mut" style="font-size:12px">已安装</span>'
           : '<button class="btn sm ' + s.cls + '" data-dl="' + esc(e.id) + '">' + s.label + '</button>';
         return '<div class="row" data-detail="' + esc(e.id) + '" style="cursor:pointer">' +
-          '<div class="mid"><div class="nm"><span class="nt">' + esc(e.name) + '</span> <span class="mut" style="font-size:12px">v' + esc(e.version) + (e.author ? ' · ' + esc(e.author) : '') + '</span></div>' +
+          '<div class="mid"><div class="nm"><span class="nt">' + esc(e.name) + '</span> <span class="mut" style="font-size:12px">v' + esc(e.version) + ' · ' + esc(catLabel(e)) + (e.author ? ' · ' + esc(e.author) : '') + '</span></div>' +
           '<div class="sub">' + esc(e.description || '') + '</div></div>' + btn + '</div>';
       }).join('') + '</div><div class="btns" style="justify-content:center;margin-top:10px"><button class="btn sm" id="wsRef">刷新列表</button></div>';
     }
@@ -99,7 +110,8 @@
       if (!info) return '<div class="empty"><b>找不到这个插件</b></div>';
       var s = entry ? status(entry) : { k: 'ok' };
       var on = isActive(m);
-      var rows = '<div class="kv"><span>版本</span><span>' + esc(info.version) + (m && entry && s.k === 'update' ? ' <span class="mut" style="font-size:12px">（已装 ' + esc(m.version) + '）</span>' : '') + '</span></div>' +
+      var rows = '<div class="kv"><span>分类</span><span>' + esc(w.Mods.CATEGORIES[catOf(info)]) + '</span></div>' +
+        '<div class="kv"><span>版本</span><span>' + esc(info.version) + (m && entry && s.k === 'update' ? ' <span class="mut" style="font-size:12px">（已装 ' + esc(m.version) + '）</span>' : '') + '</span></div>' +
         (info.author ? '<div class="kv"><span>作者</span><span>' + esc(info.author) + '</span></div>' : '') +
         '<div class="kv"><span>状态</span><span>' + (m ? (on ? '已安装 · 使用中' : '已安装') : '未安装') + '</span></div>';
       var btns = '';
@@ -126,6 +138,8 @@
       page.onclick = function (e) {
         var seg = e.target.closest('[data-seg]');
         if (seg) { st.seg = seg.getAttribute('data-seg'); render(); return; }
+        var chip = e.target.closest('[data-cat]');
+        if (chip) { st.cat = chip.getAttribute('data-cat'); render(); return; }
         var dl = e.target.closest('[data-dl]');
         if (dl) { var en = findEntry(dl.getAttribute('data-dl')); if (en) doInstall(en, dl); return; }
         if (e.target.closest('#wsRef')) {

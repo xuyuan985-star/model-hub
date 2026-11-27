@@ -5,6 +5,14 @@
   "author": "model-hub",
   "description": "朱印换成玫瑰红，偏暖的纸色，适合夜间阅读。",
   "type": "theme",
-  "light": { "--zhu": "#BE185D", "--zhu-soft": "rgba(190,24,93,.08)", "--paper": "#FBF7F4" },
-  "dark": { "--zhu": "#F472B6", "--zhu-soft": "rgba(244,114,182,.12)" }
+  "category": "ui",
+  "light": {
+    "--zhu": "#BE185D",
+    "--zhu-soft": "rgba(190,24,93,.08)",
+    "--paper": "#FBF7F4"
+  },
+  "dark": {
+    "--zhu": "#F472B6",
+    "--zhu-soft": "rgba(244,114,182,.12)"
+  }
 }

@@ -21,6 +21,8 @@
   var STORE = 'mods.json';
   var ALLOWED = ['--paper', '--surface', '--surface-2', '--ink', '--ink2', '--ink3', '--line', '--line2',
     '--zhu', '--zhu-soft', '--dian', '--dian-soft', '--jin', '--jin-soft', '--good', '--bad', '--mask'];
+  /** 插件分类（工坊里按此筛选）。清单写了未知分类或不写，统一归到 ui。 */
+  var CATEGORIES = { ui: '界面', rank: '榜单', tool: '工具' };
   var ID_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
   var SEMVER_RE = /^\d+\.\d+\.\d+$/;
   var COLOR_RE = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\(\s*[\d.%\s,]+\))$/;
@@ -43,7 +45,8 @@
     if (!name) return { ok: false, error: '缺少 name' };
     var version = str(raw.version, 20);
     if (!SEMVER_RE.test(version)) return { ok: false, error: 'version 需为 x.y.z 格式' };
-    var base = { id: id, name: name, version: version, author: str(raw.author, 30), description: str(raw.description, 120) };
+    var cat = CATEGORIES[raw.category] ? raw.category : 'ui';
+    var base = { id: id, name: name, version: version, author: str(raw.author, 30), description: str(raw.description, 120), category: cat };
     if (raw.type === 'effect') {
       // 效果插件只能从内置样式表里选，不接受任何自定义 CSS
       if (!EFFECTS[raw.style]) return { ok: false, error: '效果样式只能是 ' + Object.keys(EFFECTS).join(' / ') };
@@ -111,6 +114,7 @@
       for (var i = 0; i < 3; i++) { var d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0 ? 1 : -1; }
       return 0;
     },
+    CATEGORIES: CATEGORIES,
     get enabledId() { return state.enabled; },
     get effectId() { return state.effect; },
     /** 启用/停用效果插件（与主题独立）。传 null 关闭效果。 */

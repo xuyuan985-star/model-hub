@@ -5,6 +5,7 @@
   "author": "model-hub",
   "description": "把朱印红换成海蓝色，浅色与深色模式都有适配。",
   "type": "theme",
+  "category": "ui",
   "light": {
     "--zhu": "#0E7490",
     "--zhu-soft": "rgba(14,116,144,.08)"
