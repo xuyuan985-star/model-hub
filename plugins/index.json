@@ -16,6 +16,14 @@
       "author": "model-hub",
       "description": "朱印换成玫瑰红，偏暖的纸色，适合夜间阅读。",
       "path": "plugins/rose-ink/mod.json"
+    },
+    {
+      "id": "hall-podium",
+      "name": "殿堂榜首",
+      "version": "1.0.0",
+      "author": "model-hub",
+      "description": "榜单前三名加金、银、铜的殿堂式底纹与金属边框，第一名金，第二名银，第三名铜。",
+      "path": "plugins/hall-podium/mod.json"
     }
   ]
 }

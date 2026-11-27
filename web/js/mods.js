@@ -25,6 +25,13 @@
   var SEMVER_RE = /^\d+\.\d+\.\d+$/;
   var COLOR_RE = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\(\s*[\d.%\s,]+\))$/;
 
+  /** 内置效果样式表：清单只能引用名字，具体样式在这里写死。 */
+  var EFFECTS = {
+    gold:   { cls: 'pod-gold',   label: '金' },
+    silver: { cls: 'pod-silver', label: '银' },
+    bronze: { cls: 'pod-bronze', label: '铜' }
+  };
+
   function str(v, max) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
 
   /** 校验并规范化清单。返回 {ok, mod} 或 {ok:false, error}。 */
@@ -36,14 +43,18 @@
     if (!name) return { ok: false, error: '缺少 name' };
     var version = str(raw.version, 20);
     if (!SEMVER_RE.test(version)) return { ok: false, error: 'version 需为 x.y.z 格式' };
-    if (raw.type !== 'theme') return { ok: false, error: '暂只支持 type 为 theme 的插件' };
-    var mod = {
-      id: id, name: name, version: version, type: 'theme',
-      author: str(raw.author, 30), description: str(raw.description, 120),
-      light: pickVars(raw.light), dark: pickVars(raw.dark)
-    };
-    if (!Object.keys(mod.light).length && !Object.keys(mod.dark).length) return { ok: false, error: '插件没有任何有效的颜色变量' };
-    return { ok: true, mod: mod };
+    var base = { id: id, name: name, version: version, author: str(raw.author, 30), description: str(raw.description, 120) };
+    if (raw.type === 'effect') {
+      // 效果插件只能从内置样式表里选，不接受任何自定义 CSS
+      if (!EFFECTS[raw.style]) return { ok: false, error: '效果样式只能是 ' + Object.keys(EFFECTS).join(' / ') };
+      base.type = 'effect'; base.style = raw.style;
+      return { ok: true, mod: base };
+    }
+    if (raw.type !== 'theme') return { ok: false, error: '暂只支持 type 为 theme 或 effect 的插件' };
+    base.type = 'theme';
+    base.light = pickVars(raw.light); base.dark = pickVars(raw.dark);
+    if (!Object.keys(base.light).length && !Object.keys(base.dark).length) return { ok: false, error: '插件没有任何有效的颜色变量' };
+    return { ok: true, mod: base };
   }
 
   function pickVars(obj) {
@@ -57,25 +68,37 @@
   }
 
   // ---------- 已安装插件的存储 ----------
-  var state = C.store.get(STORE, { enabled: null, list: [] });
-  if (!state || !Array.isArray(state.list)) state = { enabled: null, list: [] };
+  var state = C.store.get(STORE, { enabled: null, effect: null, list: [] });
+  if (!state || !Array.isArray(state.list)) state = { enabled: null, effect: null, list: [] };
+  if (state.effect === undefined) state.effect = null;
   var mods = {};
   state.list.forEach(function (m) { var r = validate(m); if (r.ok) mods[r.mod.id] = r.mod; });
 
-  function save() { C.store.set(STORE, { enabled: state.enabled, list: Object.keys(mods).map(function (k) { return mods[k]; }) }); C.emit('mods'); }
+  function save() { C.store.set(STORE, { enabled: state.enabled, effect: state.effect, list: Object.keys(mods).map(function (k) { return mods[k]; }) }); C.emit('mods'); }
 
   /** 把当前启用的主题覆盖写入页面（<style id="modStyle">，在 app.css 之后生效） */
   function apply() {
     var el = document.getElementById('modStyle');
     if (!el) { el = document.createElement('style'); el.id = 'modStyle'; document.head.appendChild(el); }
     var m = state.enabled && mods[state.enabled];
-    if (!m) { el.textContent = ''; return; }
     function block(sel, vars) {
       var keys = Object.keys(vars);
       return keys.length ? sel + '{' + keys.map(function (k) { return k + ':' + vars[k] + ';'; }).join('') + '}' : '';
     }
-    // 深色块选择器特异性更高（0,2,0），深色模式下会压过浅色块，无需在 JS 里判断主题
-    el.textContent = block(':root', m.light) + block(':root[data-theme=dark]', m.dark);
+    // 只有主题类插件写入颜色变量；深色块选择器特异性更高（0,2,0），无需在 JS 里判断主题
+    el.textContent = (m && m.type === 'theme') ? block(':root', m.light) + block(':root[data-theme=dark]', m.dark) : '';
+    applyEffect();
+  }
+
+  /** 效果：给 <body> 加上内置样式类，并打标记让榜单前三名套用。与主题互不影响。 */
+  function applyEffect() {
+    var body = document.body; if (!body) return;
+    Object.keys(EFFECTS).forEach(function (k) { body.classList.remove(EFFECTS[k].cls); });
+    var e = state.effect && mods[state.effect];
+    // 殿堂效果是一整套：第一名金、第二名银、第三名铜，由 CSS 按名次分别着色。
+    // 清单里的 style 只作标识，开启即整套生效。
+    // 开启时三档一起挂上，CSS 才能让第一名金、第二名银、第三名铜同时生效
+    if (e && e.type === 'effect' && EFFECTS[e.style]) Object.keys(EFFECTS).forEach(function (k) { body.classList.add(EFFECTS[k].cls); });
   }
 
   var mods_api = {
@@ -89,6 +112,14 @@
       return 0;
     },
     get enabledId() { return state.enabled; },
+    get effectId() { return state.effect; },
+    /** 启用/停用效果插件（与主题独立）。传 null 关闭效果。 */
+    enableEffect: function (id) {
+      if (id && (!mods[id] || mods[id].type !== 'effect')) return false;
+      state.effect = id || null;
+      save(); apply();
+      return true;
+    },
     /** 导入一份清单（对象或 JSON 字符串）。同 id 覆盖。 */
     install: function (src) {
       var raw;
@@ -103,12 +134,13 @@
       if (!mods[id]) return false;
       delete mods[id];
       if (state.enabled === id) state.enabled = null;
+      if (state.effect === id) state.effect = null;
       save(); apply();
       return true;
     },
     /** 启用某个插件；传 null 恢复默认配色 */
     enable: function (id) {
-      if (id && !mods[id]) return false;
+      if (id && (!mods[id] || mods[id].type !== 'theme')) return false;
       state.enabled = id || null;
       save(); apply();
       return true;

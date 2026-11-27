@@ -517,7 +517,9 @@
         var unit = met.money ? '每百万字' : met.pct ? '%' : met.elo ? '对战分' : (met.u || '');
         var title = m.releaseName || m.shortName || m.name;
         var tier = allTiers ? effortName(m) : '';
-        return '<button class="row' + (isFav(key) ? ' fav' : '') + '" data-i="' + i + '">' + (isFav(key) ? '<i class="gdot"></i>' : '') + seal(i + 1) +
+        // 前三名加 pod-N 标记，由「殿堂感」效果插件（若启用）决定外观；未启用时无任何变化
+        var pod = (i < 3) ? ' pod pod-' + (i + 1) : '';
+        return '<button class="row' + pod + (isFav(key) ? ' fav' : '') + '" data-i="' + i + '">' + (isFav(key) ? '<i class="gdot"></i>' : '') + seal(i + 1) +
           '<div class="mid"><div class="nm">' + logo(m.creatorName) + '<span class="nt">' + esc(title) + '</span></div>' +
           '<div class="sub">' + esc(m.creatorName || '') + (tier ? ' · ' + esc(tier) : '') + (F.isOpen(m) ? ' · 开源' : '') + '</div>' +
           '<div class="bar-track"><div class="bar" style="width:' + w1.toFixed(1) + '%"></div></div></div>' +

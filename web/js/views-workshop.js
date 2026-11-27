@@ -14,6 +14,18 @@
     return { k: 'ok', label: '已安装', cls: '' };
   }
 
+  /** 插件是否处于启用状态：主题看 enabledId，效果看 effectId */
+  function isActive(m) {
+    if (!m) return false;
+    return m.type === 'effect' ? w.Mods.effectId === m.id : w.Mods.enabledId === m.id;
+  }
+  /** 按类型开启（传 null 关闭）。主题与效果各自独立。 */
+  function setActive(m, on) {
+    if (!m) return;
+    if (m.type === 'effect') w.Mods.enableEffect(on ? m.id : null);
+    else w.Mods.enable(on ? m.id : null);
+  }
+
   /** 工坊概况，供更多页入口卡片使用：已装数量与可更新数量。 */
   w.Workshop = w.Workshop || {};
   w.Workshop.summary = function () {
@@ -38,7 +50,8 @@
         if (!r.ok) { toast(r.error); render(); return; }
         var isUpdate = before === 'update';
         // 新装的插件自动启用；正在使用的插件更新后保持启用；其它已装插件的更新不改变当前选择
-        if (!isUpdate || w.Mods.enabledId === r.mod.id) w.Mods.enable(r.mod.id);
+        var wasActive = isActive(w.Mods.get(r.mod.id));
+        if (!isUpdate || wasActive) setActive(r.mod, true);
         toast((isUpdate ? '已更新到 ' : '已安装 ') + r.mod.version);
         render();
       });
@@ -68,10 +81,10 @@
     }
 
     function installedView() {
-      var list = w.Mods.list(), on = w.Mods.enabledId;
+      var list = w.Mods.list();
       if (!list.length) return '<div class="empty"><b>还没有安装插件</b><p>在「收录」里下载，或粘贴 mod.json 导入。</p></div>';
       return '<div class="list boxed">' + list.map(function (m) {
-        var active = m.id === on;
+        var active = isActive(m);
         return '<div class="row" data-detail="' + esc(m.id) + '" style="cursor:pointer">' +
           '<div class="mid"><div class="nm"><span class="nt">' + esc(m.name) + '</span> <span class="mut" style="font-size:12px">v' + esc(m.version) + '</span></div>' +
           '<div class="sub">' + esc(m.description || '') + '</div></div>' +
@@ -85,15 +98,16 @@
       var info = entry || m; // 收录信息优先，否则用已装清单
       if (!info) return '<div class="empty"><b>找不到这个插件</b></div>';
       var s = entry ? status(entry) : { k: 'ok' };
-      var on = w.Mods.enabledId === id;
+      var on = isActive(m);
       var rows = '<div class="kv"><span>版本</span><span>' + esc(info.version) + (m && entry && s.k === 'update' ? ' <span class="mut" style="font-size:12px">（已装 ' + esc(m.version) + '）</span>' : '') + '</span></div>' +
         (info.author ? '<div class="kv"><span>作者</span><span>' + esc(info.author) + '</span></div>' : '') +
         '<div class="kv"><span>状态</span><span>' + (m ? (on ? '已安装 · 使用中' : '已安装') : '未安装') + '</span></div>';
       var btns = '';
       if (!m) btns += '<button class="btn main" id="dDl">下载安装</button>';
       if (m && s.k === 'update') btns += '<button class="btn main" id="dDl">更新到 ' + esc(entry.version) + '</button>';
-      if (m && !on) btns += '<button class="btn" id="dOn">启用</button>';
-      if (m && on) btns += '<button class="btn" id="dOff">恢复默认配色</button>';
+      var offLabel = m && m.type === 'effect' ? '关闭效果' : '恢复默认配色';
+      if (m && !on) btns += '<button class="btn" id="dOn">' + (m.type === 'effect' ? '开启效果' : '启用') + '</button>';
+      if (m && on) btns += '<button class="btn" id="dOff">' + offLabel + '</button>';
       if (m) btns += '<button class="btn ghost" id="dRm">删除</button>';
       return '<div class="card"><h3>' + esc(info.name) + '</h3><p>' + esc(info.description || '暂无简介') + '</p>' + rows +
         '<div class="btns">' + btns + '</div></div>';
@@ -134,8 +148,9 @@
       page.onclick = function (e) {
         if (e.target.closest('#back')) { st.detail = null; render(); return; }
         if (e.target.closest('#dDl') && entry) { doInstall(entry, e.target.closest('#dDl')); return; }
-        if (e.target.closest('#dOn')) { w.Mods.enable(id); toast('已启用'); render(); return; }
-        if (e.target.closest('#dOff')) { w.Mods.enable(null); toast('已恢复默认配色'); render(); return; }
+        var mm = w.Mods.get(id);
+        if (e.target.closest('#dOn')) { setActive(mm, true); toast(mm.type === 'effect' ? '已开启效果' : '已启用'); render(); return; }
+        if (e.target.closest('#dOff')) { setActive(mm, false); toast(mm.type === 'effect' ? '已关闭效果' : '已恢复默认配色'); render(); return; }
         if (e.target.closest('#dRm')) { removeMod(id); return; }
       };
     }
@@ -147,7 +162,7 @@
         $('#wsOk').onclick = function () {
           var r = w.Mods.install($('#wsTxt').value);
           if (!r.ok) { toast('导入失败：' + r.error); return; }
-          w.Mods.enable(r.mod.id); closeSheet(); toast('已导入并启用「' + r.mod.name + '」'); render();
+          setActive(r.mod, true); closeSheet(); toast('已导入并启用「' + r.mod.name + '」'); render();
         };
         $('#cl').onclick = closeSheet;
       });
