@@ -397,7 +397,7 @@ body.pod-gold .row.pod-1,body.pod-silver .row.pod-2,body.pod-bronze .row.pod-3{p
 body.pod-gold .row.pod-1::before,body.pod-silver .row.pod-2::before,body.pod-bronze .row.pod-3::before{content:"";position:absolute;inset:0;padding:1px;border-radius:0;pointer-events:none;z-index:0;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 /* 底纹 + 反光层：纹样常驻，高光带从左到右扫过 */
 body.pod-gold .row.pod-1::after,body.pod-silver .row.pod-2::after,body.pod-bronze .row.pod-3::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background-size:auto,auto,220% 100%;animation:podSheen 1.6s ease-out 1 both}
-body.pod-gold .row.pod-1>*,body.pod-silver .row.pod-2>*,body.pod-bronze .row.pod-3>*{position:relative;z-index:1}
+body.pod-gold .row.pod-1>:not(.gdot),body.pod-silver .row.pod-2>:not(.gdot),body.pod-bronze .row.pod-3>:not(.gdot){position:relative;z-index:1}
 
 /* 第一名 · 金 */
 body.pod-gold .row.pod-1{background:linear-gradient(135deg,#2A2110 0%,#1A1508 55%,#2E2410 100%)}
